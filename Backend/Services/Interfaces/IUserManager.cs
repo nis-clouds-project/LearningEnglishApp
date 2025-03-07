@@ -1,6 +1,5 @@
 using Backend.Models;
 
-
 namespace Backend.Services.Interfaces;
 
 /// <summary>
@@ -12,7 +11,8 @@ public interface IUserManager
     /// Добавляет пользователя в систему.
     /// </summary>
     /// <param name="user">Объект пользователя для добавления.</param>
-    void AddUser(User user);
+    /// <returns>Добавленный пользователь.</returns>
+    Task<User> AddUserAsync(User user);
 
     /// <summary>
     /// Возвращает пользователя по его идентификатору.
@@ -20,5 +20,12 @@ public interface IUserManager
     /// <param name="userId">Идентификатор пользователя.</param>
     /// <returns>Объект пользователя.</returns>
     /// <exception cref="UserNotFoundException">Выбрасывается, если пользователь с указанным идентификатором не найден.</exception>
-    User GetUser(long userId);
+    Task<User> GetUserAsync(long userId);
+
+    /// <summary>
+    /// Проверяет существование пользователя.
+    /// </summary>
+    /// <param name="userId">Идентификатор пользователя.</param>
+    /// <returns>True если пользователь существует, иначе false.</returns>
+    Task<bool> IsUserExistsAsync(long userId);
 }

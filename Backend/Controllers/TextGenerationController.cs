@@ -1,5 +1,5 @@
-using Backend.Integrations.Interfaces;
 using Backend.Models;
+using Backend.Integrations.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Controllers
@@ -32,14 +32,11 @@ namespace Backend.Controllers
         /// <response code="400">Некорректный запрос (например, пустой список слов).</response>
         /// <response code="500">Ошибка при генерации текста.</response>
         [HttpPost("generate")]
-        public IActionResult GenerateText([FromBody] List<Word> words)
+        public async Task<IActionResult> GenerateTextAsync([FromBody] List<Word> words)
         {
             try
             {
-                // Генерируем текст с использованием ITextGenerator
                 var generatedText = _textGenerator.GenerateText(words);
-
-                // Возвращаем сгенерированный текст с кодом 200 OK
                 return Ok(generatedText);
             }
             catch (ArgumentException ex)

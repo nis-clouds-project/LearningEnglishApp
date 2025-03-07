@@ -28,35 +28,31 @@ namespace Backend.Controllers
         /// Получает случайные слова для генерации текста.
         /// </summary>
         /// <param name="userId">Идентификатор пользователя.</param>
-        /// <param name="category">Категория слов (опционально). Если не указана, выбираются слова из всех категорий.</param>
+        /// <param name="category">Категория слов (опционально).</param>
         /// <returns>Список слов.</returns>
         /// <response code="200">Слова успешно получены.</response>
         /// <response code="403">Нет доступных слов для генерации текста.</response>
         /// <response code="404">Пользователь не найден.</response>
         [HttpGet("random-words")]
-        public IActionResult GetRandomWordsForGeneratingText([FromQuery] long userId,
-            [FromQuery] CategoryType? category)
+        public async Task<IActionResult> GetRandomWordsForGeneratingTextAsync(
+            [FromQuery] long userId,
+            [FromQuery] CategoryType? category = null)
         {
             try
             {
-                // Получаем случайные слова для генерации текста через сервис _wordManager
-                var words = _wordManager.GetRandomWordsForGeneratingText(userId, category);
-                // Возвращаем список слов с кодом 200 OK
+                var words = await _wordManager.GetRandomWordsForGeneratingTextAsync(userId, category);
                 return Ok(words);
             }
             catch (NoWordsAvailableException ex)
             {
-                // Если нет доступных слов, возвращаем 409 Conflict с сообщением об ошибке
                 return StatusCode(409, ex.Message);
             }
             catch (UserNotFoundException ex)
             {
-                // Если пользователь не найден, возвращаем 404 Not Found с сообщением об ошибке
                 return NotFound(ex.Message);
             }
             catch (Exception)
             {
-                // В случае непредвиденной ошибки возвращаем 500 Internal Server Error
                 return StatusCode(500, "Непредвиденная ошибка");
             }
         }
@@ -71,33 +67,29 @@ namespace Backend.Controllers
         /// <response code="403">Слово уже есть в словаре пользователя.</response>
         /// <response code="404">Слово или пользователь не найдены.</response>
         [HttpPost("add-word")]
-        public IActionResult AddWordInUserVocabulary([FromQuery] long userId, [FromQuery] int wordId)
+        public async Task<IActionResult> AddWordToUserVocabularyAsync(
+            [FromQuery] long userId,
+            [FromQuery] int wordId)
         {
             try
             {
-                // Добавляем слово в словарь пользователя через сервис _wordManager
-                _wordManager.AddWordInUserVocabulary(userId, wordId);
-                // Возвращаем 200 OK
+                await _wordManager.AddWordToUserVocabularyAsync(userId, wordId);
                 return Ok();
             }
             catch (WordNotFoundException ex)
             {
-                // Если слово не найдено, возвращаем 404 Not Found с сообщением об ошибке
                 return NotFound(ex.Message);
             }
             catch (UserNotFoundException ex)
             {
-                // Если пользователь не найден, возвращаем 404 Not Found с сообщением об ошибке
                 return NotFound(ex.Message);
             }
             catch (WordAlreadyInVocabularyException ex)
             {
-                // Если слово уже есть в словаре пользователя, возвращаем 403 Forbidden с сообщением об ошибке
                 return StatusCode(403, ex.Message);
             }
             catch (Exception)
             {
-                // В случае непредвиденной ошибки возвращаем 500 Internal Server Error
                 return StatusCode(500, "Непредвиденная ошибка");
             }
         }
@@ -107,38 +99,30 @@ namespace Backend.Controllers
         /// </summary>
         /// <param name="userId">Идентификатор пользователя.</param>
         /// <param name="category">Категория слова.</param>
-        /// <returns>Идентификатор слова.</returns>
+        /// <returns>Слово для изучения.</returns>
         /// <response code="200">Слово успешно получено.</response>
         /// <response code="403">Нет доступных слов для изучения.</response>
         /// <response code="404">Пользователь не найден.</response>
         [HttpGet("random-word")]
-        public IActionResult GetRandomWordForLearning([FromQuery] long userId, [FromQuery] CategoryType category)
+        public async Task<IActionResult> GetRandomWordForLearningAsync(
+            [FromQuery] long userId,
+            [FromQuery] CategoryType category)
         {
             try
             {
-                // Получаем случайное слово для изучения через сервис _wordManager
-                var wordId = _wordManager.GetRandomWordForLearning(userId, category);
-                // Возвращаем идентификатор слова с кодом 200 OK
-                return Ok(wordId);
-            }
-            catch (WordAlreadyInVocabularyException ex)
-            {
-                // Если слово уже есть в словаре пользователя, возвращаем 403 Forbidden с сообщением об ошибке
-                return StatusCode(403, ex.Message);
+                var word = await _wordManager.GetRandomWordForLearningAsync(userId, category);
+                return Ok(word);
             }
             catch (NoWordsAvailableException ex)
             {
-                // Если нет доступных слов для изучения, возвращаем 409 Conflict с сообщением об ошибке
                 return StatusCode(409, ex.Message);
             }
             catch (UserNotFoundException ex)
             {
-                // Если пользователь не найден, возвращаем 404 Not Found с сообщением об ошибке
                 return NotFound(ex.Message);
             }
             catch (Exception)
             {
-                // В случае непредвиденной ошибки возвращаем 500 Internal Server Error
                 return StatusCode(500, "Непредвиденная ошибка");
             }
         }
@@ -151,64 +135,47 @@ namespace Backend.Controllers
         /// <response code="200">Слово успешно получено.</response>
         /// <response code="404">Слово не найдено.</response>
         [HttpGet("word-by-id")]
-        public IActionResult GetWordById([FromQuery] int wordId)
+        public async Task<IActionResult> GetWordByIdAsync([FromQuery] int wordId)
         {
             try
             {
-                // Получаем слово по его идентификатору через сервис _wordManager
-                var word = _wordManager.GetWordById(wordId);
-                // Возвращаем объект слова с кодом 200 OK
+                var word = await _wordManager.GetWordByIdAsync(wordId);
                 return Ok(word);
             }
             catch (WordNotFoundException ex)
             {
-                // Если слово не найдено, возвращаем 404 Not Found с сообщением об ошибке
                 return NotFound(ex.Message);
             }
             catch (Exception)
             {
-                // В случае непредвиденной ошибки возвращаем 500 Internal Server Error
                 return StatusCode(500, "Непредвиденная ошибка");
             }
         }
 
         /// <summary>
-        /// Добавляет пользовательское слово в словарь пользователя.
+        /// Добавляет новое слово.
         /// </summary>
         /// <param name="userId">Идентификатор пользователя.</param>
-        /// <param name="word">Текст слова.</param>
-        /// <returns>Результат операции.</returns>
+        /// <param name="word">Слово для добавления.</param>
+        /// <returns>Добавленное слово.</returns>
         /// <response code="200">Слово успешно добавлено.</response>
-        /// <response code="403">Слово уже есть в словаре пользователя.</response>
-        /// <response code="404">Слово или пользователь не найдены.</response>
+        /// <response code="404">Пользователь не найден.</response>
         [HttpPost("add-custom-word")]
-        public IActionResult AddCustomWordInUserVocabulary([FromQuery] long userId, [FromQuery] string word)
+        public async Task<IActionResult> AddCustomWordAsync(
+            [FromQuery] long userId,
+            [FromBody] Word word)
         {
             try
             {
-                // Добавляем пользовательское слово в словарь пользователя через сервис _wordManager
-                _wordManager.AddCustomWordInUserVocabulary(userId, word);
-                // Возвращаем 200 OK
-                return Ok();
-            }
-            catch (WordNotFoundException ex)
-            {
-                // Если слово не найдено, возвращаем 404 Not Found с сообщением об ошибке
-                return NotFound(ex.Message);
-            }
-            catch (WordAlreadyInVocabularyException ex)
-            {
-                // Если слово уже есть в словаре пользователя, возвращаем 403 Forbidden с сообщением об ошибке
-                return StatusCode(403, ex.Message);
+                var addedWord = await _wordManager.AddCustomWordAsync(userId, word);
+                return Ok(addedWord);
             }
             catch (UserNotFoundException ex)
             {
-                // Если пользователь не найден, возвращаем 404 Not Found с сообщением об ошибке
                 return NotFound(ex.Message);
             }
             catch (Exception)
             {
-                // В случае непредвиденной ошибки возвращаем 500 Internal Server Error
                 return StatusCode(500, "Непредвиденная ошибка");
             }
         }

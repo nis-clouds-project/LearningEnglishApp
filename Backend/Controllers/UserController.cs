@@ -7,39 +7,62 @@ namespace Backend.Controllers
 {
     [ApiController]
     [Route("api/[controller]")] // Базовый маршрут для контроллера: /api/user
-    public class UserController(IUserManager userManager) : ControllerBase
+    public class UserController : ControllerBase
     {
+        private readonly IUserManager _userManager;
+
+        public UserController(IUserManager userManager)
+        {
+            _userManager = userManager;
+        }
+
         // POST: api/user/add
         [HttpPost("add")]
-        public IActionResult AddUser([FromBody] User user)
+        public async Task<IActionResult> AddUserAsync([FromBody] long userId)
         {
             try
             {
-                userManager.AddUser(user);
-                return Ok(); // Возвращаем 200 OK
+                var user = new User(userId);
+                var addedUser = await _userManager.AddUserAsync(user);
+                return Ok(addedUser);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message); // Возвращаем 500
+                return StatusCode(500, ex.Message);
             }
         }
 
         // GET: api/user/get?userId=123
         [HttpGet("get")]
-        public IActionResult GetUser([FromQuery] long userId)
+        public async Task<IActionResult> GetUserAsync([FromQuery] long userId)
         {
             try
             {
-                var user = userManager.GetUser(userId);
-                return Ok(user); // Возвращаем объект пользователя с кодом 200 OK
+                var user = await _userManager.GetUserAsync(userId);
+                return Ok(user);
             }
             catch (UserNotFoundException ex)
             {
-                return NotFound(ex.Message); // Возвращаем 404 Not Found с сообщением об ошибке
+                return NotFound(ex.Message);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message); // Возвращаем 500
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        // GET: api/user/exists?userId=123
+        [HttpGet("exists")]
+        public async Task<IActionResult> UserExistsAsync([FromQuery] long userId)
+        {
+            try
+            {
+                var exists = await _userManager.IsUserExistsAsync(userId);
+                return Ok(exists);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
             }
         }
     }
