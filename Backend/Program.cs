@@ -1,27 +1,34 @@
-var builder = WebApplication.CreateBuilder(args);
+using Backend.Integrations;
+using Backend.Integrations.Interfaces;
+using Backend.Services;
+using Backend.Services.Interfaces;
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+namespace Backend
 {
-    app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    public static class Program
+    {
+        public static void Main(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);
+
+            builder.Services.AddSingleton<IUserManager, InMemoryUserManager>();
+            builder.Services.AddSingleton<IWordManager, InMemoryWordManager>();
+            builder.Services.AddSingleton<ITextGenerator, GigaChatTextGenerator>();
+            builder.Services.AddControllers();
+            builder.Services.AddSwaggerGen();
+
+            var app = builder.Build();
+
+            app.UseHttpsRedirection();
+            app.MapControllers();
+            
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+            }
+
+            app.Run();
+        }
+    }
 }
-
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.UseRouting();
-
-app.UseAuthorization();
-
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
-
-app.Run();
