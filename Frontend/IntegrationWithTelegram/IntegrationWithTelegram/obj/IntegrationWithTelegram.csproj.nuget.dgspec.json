@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/macbook/RiderProjects/ConsoleApp10/IntegrationWithTelegram/IntegrationWithTelegram.csproj": {}
+    "/Users/macbook/EnglishProjectGit/LearningEnglishApp/Frontend/IntegrationWithTelegram/IntegrationWithTelegram/IntegrationWithTelegram.csproj": {}
   },
   "projects": {
-    "/Users/macbook/RiderProjects/ConsoleApp10/IntegrationWithTelegram/IntegrationWithTelegram.csproj": {
+    "/Users/macbook/EnglishProjectGit/LearningEnglishApp/Frontend/IntegrationWithTelegram/IntegrationWithTelegram/IntegrationWithTelegram.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/macbook/RiderProjects/ConsoleApp10/IntegrationWithTelegram/IntegrationWithTelegram.csproj",
+        "projectUniqueName": "/Users/macbook/EnglishProjectGit/LearningEnglishApp/Frontend/IntegrationWithTelegram/IntegrationWithTelegram/IntegrationWithTelegram.csproj",
         "projectName": "IntegrationWithTelegram",
-        "projectPath": "/Users/macbook/RiderProjects/ConsoleApp10/IntegrationWithTelegram/IntegrationWithTelegram.csproj",
+        "projectPath": "/Users/macbook/EnglishProjectGit/LearningEnglishApp/Frontend/IntegrationWithTelegram/IntegrationWithTelegram/IntegrationWithTelegram.csproj",
         "packagesPath": "/Users/macbook/.nuget/packages/",
-        "outputPath": "/Users/macbook/RiderProjects/ConsoleApp10/IntegrationWithTelegram/obj/",
+        "outputPath": "/Users/macbook/EnglishProjectGit/LearningEnglishApp/Frontend/IntegrationWithTelegram/IntegrationWithTelegram/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/macbook/.nuget/NuGet/NuGet.Config"

@@ -8,6 +8,6 @@ build_property.PlatformNeutralAssembly =
 build_property.EnforceExtendedAnalyzerRules = 
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = IntegrationWithTelegram
-build_property.ProjectDir = /Users/macbook/RiderProjects/ConsoleApp10/IntegrationWithTelegram/
+build_property.ProjectDir = /Users/macbook/EnglishProjectGit/LearningEnglishApp/Frontend/IntegrationWithTelegram/IntegrationWithTelegram/
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 

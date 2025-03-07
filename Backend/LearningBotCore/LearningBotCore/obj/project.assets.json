@@ -546,11 +546,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/macbook/RiderProjects/LearningBotCore/LearningBotCore/LearningBotCore.csproj",
+      "projectUniqueName": "/Users/macbook/EnglishProjectGit/LearningEnglishApp/Backend/LearningBotCore/LearningBotCore/LearningBotCore.csproj",
       "projectName": "LearningBotCore",
-      "projectPath": "/Users/macbook/RiderProjects/LearningBotCore/LearningBotCore/LearningBotCore.csproj",
+      "projectPath": "/Users/macbook/EnglishProjectGit/LearningEnglishApp/Backend/LearningBotCore/LearningBotCore/LearningBotCore.csproj",
       "packagesPath": "/Users/macbook/.nuget/packages/",
-      "outputPath": "/Users/macbook/RiderProjects/LearningBotCore/LearningBotCore/obj/",
+      "outputPath": "/Users/macbook/EnglishProjectGit/LearningEnglishApp/Backend/LearningBotCore/LearningBotCore/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/macbook/.nuget/NuGet/NuGet.Config"

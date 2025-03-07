@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Li8wojaJXDo=",
+  "dgSpecHash": "apIkgbh20I4=",
   "success": true,
-  "projectFilePath": "/Users/macbook/RiderProjects/ConsoleApp10/IntegrationWithTelegram/IntegrationWithTelegram.csproj",
+  "projectFilePath": "/Users/macbook/EnglishProjectGit/LearningEnglishApp/Frontend/IntegrationWithTelegram/IntegrationWithTelegram/IntegrationWithTelegram.csproj",
   "expectedPackageFiles": [
     "/Users/macbook/.nuget/packages/microsoft.extensions.configuration.abstractions/8.0.0/microsoft.extensions.configuration.abstractions.8.0.0.nupkg.sha512",
     "/Users/macbook/.nuget/packages/microsoft.extensions.configuration.binder/8.0.0/microsoft.extensions.configuration.binder.8.0.0.nupkg.sha512",
