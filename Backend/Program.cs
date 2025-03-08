@@ -23,7 +23,19 @@ namespace Backend
             builder.Services.AddSingleton<ITextGenerator, GigaChatTextGenerator>();
             
             builder.Services.AddControllers();
+            builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+
+            // Add CORS
+            builder.Services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(policy =>
+                {
+                    policy.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader();
+                });
+            });
 
             var app = builder.Build();
 
@@ -35,6 +47,8 @@ namespace Backend
             }
 
             app.UseHttpsRedirection();
+            app.UseCors();
+            app.UseAuthorization();
             app.MapControllers();
             
             if (app.Environment.IsDevelopment())
