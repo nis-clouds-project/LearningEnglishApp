@@ -14,46 +14,48 @@ namespace Backend.Controllers
     public class WordController : ControllerBase
     {
         private readonly IWordManager _wordManager;
+        private readonly IUserManager _userManager;
 
         /// <summary>
-        /// Конструктор для внедрения зависимости IWordManager.
+        /// Конструктор для внедрения зависимости IWordManager и IUserManager.
         /// </summary>
         /// <param name="wordManager">Сервис для управления словами.</param>
-        public WordController(IWordManager wordManager)
+        /// <param name="userManager">Сервис для управления пользователями.</param>
+        public WordController(IWordManager wordManager, IUserManager userManager)
         {
             _wordManager = wordManager;
+            _userManager = userManager;
         }
 
         /// <summary>
-        /// Получает случайные слова для генерации текста.
+        /// Получает случайное слово для изучения.
         /// </summary>
         /// <param name="userId">Идентификатор пользователя.</param>
-        /// <param name="category">Категория слов (опционально).</param>
-        /// <returns>Список слов.</returns>
-        /// <response code="200">Слова успешно получены.</response>
-        /// <response code="403">Нет доступных слов для генерации текста.</response>
+        /// <param name="category">Категория слова.</param>
+        /// <returns>Слово для изучения.</returns>
+        /// <response code="200">Слово успешно получено.</response>
+        /// <response code="403">Нет доступных слов для изучения.</response>
         /// <response code="404">Пользователь не найден.</response>
-        [HttpGet("random-words")]
-        public async Task<IActionResult> GetRandomWordsForGeneratingTextAsync(
+        [HttpGet("random")]
+        public async Task<IActionResult> GetRandomWord(
             [FromQuery] long userId,
-            [FromQuery] CategoryType? category = null)
+            [FromQuery] string? category = null)
         {
             try
             {
-                var words = await _wordManager.GetRandomWordsForGeneratingTextAsync(userId, category);
-                return Ok(words);
+                var user = await _userManager.GetUserAsync(userId);
+                if (user == null)
+                    return NotFound($"Пользователь с ID {userId} не найден");
+
+                var word = await _wordManager.GetRandomWordAsync(user, category);
+                if (word == null)
+                    return NotFound("Подходящих слов не найдено");
+
+                return Ok(word);
             }
-            catch (NoWordsAvailableException ex)
+            catch (Exception ex)
             {
-                return StatusCode(409, ex.Message);
-            }
-            catch (UserNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, "Непредвиденная ошибка");
+                return StatusCode(500, ex.Message);
             }
         }
 
@@ -66,31 +68,26 @@ namespace Backend.Controllers
         /// <response code="200">Слово успешно добавлено.</response>
         /// <response code="403">Слово уже есть в словаре пользователя.</response>
         /// <response code="404">Слово или пользователь не найдены.</response>
-        [HttpPost("add-word")]
-        public async Task<IActionResult> AddWordToUserVocabularyAsync(
+        [HttpPost("vocabulary/add")]
+        public async Task<IActionResult> AddWordToVocabulary(
             [FromQuery] long userId,
             [FromQuery] int wordId)
         {
             try
             {
-                await _wordManager.AddWordToUserVocabularyAsync(userId, wordId);
+                var user = await _userManager.GetUserAsync(userId);
+                if (user == null)
+                    return NotFound($"Пользователь с ID {userId} не найден");
+
+                var success = await _wordManager.AddWordToVocabularyAsync(user, wordId);
+                if (!success)
+                    return NotFound($"Слово с ID {wordId} не найдено");
+
                 return Ok();
             }
-            catch (WordNotFoundException ex)
+            catch (Exception ex)
             {
-                return NotFound(ex.Message);
-            }
-            catch (UserNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (WordAlreadyInVocabularyException ex)
-            {
-                return StatusCode(403, ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, "Непредвиденная ошибка");
+                return StatusCode(500, ex.Message);
             }
         }
 
@@ -106,7 +103,7 @@ namespace Backend.Controllers
         [HttpGet("random-word")]
         public async Task<IActionResult> GetRandomWordForLearningAsync(
             [FromQuery] long userId,
-            [FromQuery] CategoryType category)
+            [FromQuery] string category)
         {
             try
             {
@@ -134,21 +131,21 @@ namespace Backend.Controllers
         /// <returns>Объект слова.</returns>
         /// <response code="200">Слово успешно получено.</response>
         /// <response code="404">Слово не найдено.</response>
-        [HttpGet("word-by-id")]
-        public async Task<IActionResult> GetWordByIdAsync([FromQuery] int wordId)
+        [HttpGet("{wordId}")]
+        public async Task<IActionResult> GetWordById(int wordId)
         {
             try
             {
                 var word = await _wordManager.GetWordByIdAsync(wordId);
                 return Ok(word);
             }
-            catch (WordNotFoundException ex)
+            catch (KeyNotFoundException ex)
             {
                 return NotFound(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, "Непредвиденная ошибка");
+                return StatusCode(500, ex.Message);
             }
         }
 
@@ -160,8 +157,8 @@ namespace Backend.Controllers
         /// <returns>Добавленное слово.</returns>
         /// <response code="200">Слово успешно добавлено.</response>
         /// <response code="404">Пользователь не найден.</response>
-        [HttpPost("add-custom-word")]
-        public async Task<IActionResult> AddCustomWordAsync(
+        [HttpPost]
+        public async Task<IActionResult> AddCustomWord(
             [FromQuery] long userId,
             [FromBody] Word word)
         {
@@ -170,13 +167,37 @@ namespace Backend.Controllers
                 var addedWord = await _wordManager.AddCustomWordAsync(userId, word);
                 return Ok(addedWord);
             }
-            catch (UserNotFoundException ex)
+            catch (KeyNotFoundException ex)
             {
                 return NotFound(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, "Непредвиденная ошибка");
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Получает слова по категории.
+        /// </summary>
+        /// <param name="category">Категория слов.</param>
+        /// <returns>Список слов категории.</returns>
+        /// <response code="200">Слова успешно получены.</response>
+        /// <response code="404">Слова категории не найдены.</response>
+        [HttpGet("category/{category}")]
+        public async Task<IActionResult> GetWordsByCategory(string category)
+        {
+            try
+            {
+                var words = await _wordManager.GetWordsByCategory(category);
+                if (!words.Any())
+                    return NotFound($"Слова категории {category} не найдены");
+
+                return Ok(words);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
             }
         }
     }

@@ -38,12 +38,12 @@ public class User
     /// <summary>
     /// Список идентификаторов слов, которые пользователь выучил.
     /// </summary>
-    public List<int> LearnedWordIds { get; set; }
+    public List<int> LearnedWordIds { get; set; } = new();
 
     /// <summary>
     /// Список идентификаторов слов, которые пользователь просмотрел.
     /// </summary>
-    public List<int> ViewedWordsWordIds { get; set; }
+    public List<int> ViewedWordsWordIds { get; set; } = new();
     
-    public Dictionary<DateTime, int> UserAiUsage { get; set; }
+    public Dictionary<DateTime, int> UserAiUsage { get; set; } = new();
 }
