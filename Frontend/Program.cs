@@ -1,9 +1,13 @@
-﻿namespace Frontend;
+﻿using Frontend.Managers;
 
-class Program
+namespace Frontend
 {
-    static void Main(string[] args)
+    public static class Program
     {
-        Console.WriteLine("Hello, World!");
+
+        public static void Main()
+        {
+            BotManager.Start();
+        }
     }
 }

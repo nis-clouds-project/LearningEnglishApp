@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/ilakonev/RiderProjects/LearningEnglishApp/Frontend/Frontend.csproj": {}
+    "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend/Frontend.csproj": {}
   },
   "projects": {
-    "/Users/ilakonev/RiderProjects/LearningEnglishApp/Frontend/Frontend.csproj": {
+    "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend/Frontend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/ilakonev/RiderProjects/LearningEnglishApp/Frontend/Frontend.csproj",
+        "projectUniqueName": "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend/Frontend.csproj",
         "projectName": "Frontend",
-        "projectPath": "/Users/ilakonev/RiderProjects/LearningEnglishApp/Frontend/Frontend.csproj",
+        "projectPath": "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend/Frontend.csproj",
         "packagesPath": "/Users/ilakonev/.nuget/packages/",
-        "outputPath": "/Users/ilakonev/RiderProjects/LearningEnglishApp/Frontend/obj/",
+        "outputPath": "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/ilakonev/.nuget/NuGet/NuGet.Config"
@@ -42,6 +42,12 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
+          "dependencies": {
+            "Telegram.Bot": {
+              "target": "Package",
+              "version": "[22.4.4, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
