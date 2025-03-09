@@ -67,4 +67,12 @@ public interface IWordManager
     /// <returns>Добавленное слово.</returns>
     /// <exception cref="KeyNotFoundException">Выбрасывается, если пользователь не найден.</exception>
     Task<Word> AddCustomWordAsync(long userId, Word word);
+
+    /// <summary>
+    /// Получает список изученных слов пользователя.
+    /// </summary>
+    /// <param name="userId">Идентификатор пользователя.</param>
+    /// <param name="category">Категория слов (опционально).</param>
+    /// <returns>Список изученных слов.</returns>
+    Task<List<Word>> GetLearnedWordsAsync(long userId, string? category = null);
 }

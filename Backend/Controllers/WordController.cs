@@ -28,6 +28,75 @@ namespace Backend.Controllers
         }
 
         /// <summary>
+        /// Генерирует текст на основе слов из словаря пользователя.
+        /// </summary>
+        /// <param name="userId">Идентификатор пользователя.</param>
+        /// <param name="category">Категория слов (опционально).</param>
+        /// <returns>Сгенерированный текст.</returns>
+        /// <response code="200">Текст успешно сгенерирован.</response>
+        /// <response code="404">Пользователь не найден или нет доступных слов.</response>
+        [HttpGet("generate-text")]
+        public async Task<IActionResult> GenerateText([FromQuery] long userId, [FromQuery] string? category = null)
+        {
+            try
+            {
+                var words = await _wordManager.GetRandomWordsForGeneratingTextAsync(userId, category);
+                if (!words.Any())
+                {
+                    return NotFound("Недостаточно слов для генерации текста");
+                }
+
+                // Формируем простой текст из слов
+                var text = GenerateSimpleText(words);
+                return Ok(text);
+            }
+            catch (UserNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (NoWordsAvailableException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        private string GenerateSimpleText(List<Word> words)
+        {
+            var sentences = new List<string>();
+            var random = new Random();
+
+            // Группируем слова по категориям
+            var wordsByCategory = words.GroupBy(w => w.Category);
+
+            foreach (var category in wordsByCategory)
+            {
+                var categoryWords = category.ToList();
+                if (categoryWords.Count >= 3)
+                {
+                    // Создаем простое предложение для каждой категории
+                    var sentence = $"In the {category.Key.ToLower()} category, we have words like " +
+                                 $"{categoryWords[0].Text} ({categoryWords[0].Translation}), " +
+                                 $"{categoryWords[1].Text} ({categoryWords[1].Translation}), and " +
+                                 $"{categoryWords[2].Text} ({categoryWords[2].Translation}).";
+                    sentences.Add(sentence);
+                }
+            }
+
+            if (!sentences.Any())
+            {
+                // Если нет достаточно слов по категориям, создаем общий список
+                var wordList = string.Join(", ", words.Select(w => $"{w.Text} ({w.Translation})"));
+                sentences.Add($"Here are some words from your vocabulary: {wordList}.");
+            }
+
+            return string.Join("\n\n", sentences);
+        }
+
+        /// <summary>
         /// Получает случайное слово для изучения.
         /// </summary>
         /// <param name="userId">Идентификатор пользователя.</param>
@@ -76,14 +145,15 @@ namespace Backend.Controllers
             try
             {
                 var user = await _userManager.GetUserAsync(userId);
-                if (user == null)
-                    return NotFound($"Пользователь с ID {userId} не найден");
-
                 var success = await _wordManager.AddWordToVocabularyAsync(user, wordId);
                 if (!success)
                     return NotFound($"Слово с ID {wordId} не найдено");
 
                 return Ok();
+            }
+            catch (UserNotFoundException ex)
+            {
+                return NotFound(ex.Message);
             }
             catch (Exception ex)
             {
@@ -194,6 +264,50 @@ namespace Backend.Controllers
                     return NotFound($"Слова категории {category} не найдены");
 
                 return Ok(words);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Получает список изученных слов пользователя.
+        /// </summary>
+        /// <param name="userId">Идентификатор пользователя.</param>
+        /// <param name="category">Категория слов (опционально).</param>
+        /// <returns>Список изученных слов.</returns>
+        /// <response code="200">Список слов успешно получен.</response>
+        /// <response code="404">Пользователь не найден.</response>
+        [HttpGet("learned")]
+        public async Task<IActionResult> GetLearnedWords([FromQuery] long userId, [FromQuery] string? category = null)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(userId);
+                if (user == null)
+                    return NotFound($"Пользователь с ID {userId} не найден");
+
+                var words = await _wordManager.GetLearnedWordsAsync(userId, category);
+                
+                // Группируем слова по категориям для удобного отображения
+                var groupedWords = words
+                    .GroupBy(w => w.Category)
+                    .Select(g => new
+                    {
+                        Category = g.Key,
+                        Words = g.Select(w => new
+                        {
+                            w.Id,
+                            w.Text,
+                            w.Translation,
+                            w.LastShown
+                        }).OrderBy(w => w.Text).ToList()
+                    })
+                    .OrderBy(g => g.Category)
+                    .ToList();
+
+                return Ok(groupedWords);
             }
             catch (Exception ex)
             {

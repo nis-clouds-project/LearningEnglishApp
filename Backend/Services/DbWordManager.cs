@@ -18,6 +18,27 @@ public class DbWordManager : IWordManager
         _userManager = userManager;
     }
 
+    /// <summary>
+    /// Получает список изученных слов пользователя.
+    /// </summary>
+    public async Task<List<Word>> GetLearnedWordsAsync(long userId, string? category = null)
+    {
+        var user = await _userManager.GetUserAsync(userId) ?? 
+            throw new UserNotFoundException($"Пользователь с ID {userId} не найден");
+
+        // Получаем слова из словаря пользователя
+        var query = _context.Words
+            .Where(w => user.LearnedWordIds.Contains(w.Id));
+
+        // Фильтруем по категории, если она указана
+        if (!string.IsNullOrEmpty(category))
+        {
+            query = query.Where(w => w.Category == category);
+        }
+
+        return await query.ToListAsync();
+    }
+
     public async Task<List<Word>> GetRandomWordsForGeneratingTextAsync(long userId, string? category = null)
     {
         var user = await _userManager.GetUserAsync(userId);
@@ -162,6 +183,8 @@ public class DbWordManager : IWordManager
         if (!user.LearnedWordIds.Contains(wordId))
         {
             user.LearnedWordIds.Add(wordId);
+            // Явно говорим EF, что сущность изменилась
+            _context.Entry(user).Property(u => u.LearnedWordIds).IsModified = true;
             await _context.SaveChangesAsync();
         }
 
