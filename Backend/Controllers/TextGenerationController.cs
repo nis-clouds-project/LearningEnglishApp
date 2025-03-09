@@ -1,5 +1,6 @@
-using Backend.Models;
 using Backend.Integrations.Interfaces;
+using Backend.Models;
+using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Controllers
@@ -9,48 +10,58 @@ namespace Backend.Controllers
     /// Предоставляет API для взаимодействия с сервисом генерации текста.
     /// </summary>
     [ApiController]
-    [Route("api/text-generation")] // Базовый маршрут для контроллера: /api/text-generation
+    [Route("api/[controller]")]
     public class TextGenerationController : ControllerBase
     {
         private readonly ITextGenerator _textGenerator;
+        private readonly IWordManager _wordManager;
+        private readonly IUserManager _userManager;
 
         /// <summary>
-        /// Конструктор для внедрения зависимости ITextGenerator.
+        /// Конструктор для внедрения зависимостей ITextGenerator, IWordManager и IUserManager.
         /// </summary>
         /// <param name="textGenerator">Сервис для генерации текста.</param>
-        public TextGenerationController(ITextGenerator textGenerator)
+        /// <param name="wordManager">Менеджер слов.</param>
+        /// <param name="userManager">Менеджер пользователей.</param>
+        public TextGenerationController(
+            ITextGenerator textGenerator,
+            IWordManager wordManager,
+            IUserManager userManager)
         {
             _textGenerator = textGenerator;
+            _wordManager = wordManager;
+            _userManager = userManager;
         }
 
         /// <summary>
-        /// Генерирует текст на основе списка слов.
+        /// Генерирует текст на основе слов из словаря пользователя.
         /// </summary>
-        /// <param name="words">Список слов, на основе которых будет сгенерирован текст.</param>
+        /// <param name="userId">Идентификатор пользователя.</param>
+        /// <param name="category">Категория слов (опционально).</param>
         /// <returns>Сгенерированный текст.</returns>
         /// <response code="200">Текст успешно сгенерирован.</response>
-        /// <response code="400">Некорректный запрос (например, пустой список слов).</response>
+        /// <response code="404">Пользователь или слова не найдены.</response>
         /// <response code="500">Ошибка при генерации текста.</response>
-        [HttpPost("generate")]
-        public async Task<IActionResult> GenerateTextAsync([FromBody] List<Word> words)
+        [HttpGet("generate")]
+        public async Task<IActionResult> GenerateText([FromQuery] long userId, [FromQuery] string? category = null)
         {
             try
             {
-                var generatedText = _textGenerator.GenerateText(words);
-                return Ok(generatedText);
-            }
-            catch (ArgumentException ex)
-            {
-                // Возвращаем 400 Bad Request с сообщением об ошибке
-                return BadRequest(ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
+                var user = await _userManager.GetUserAsync(userId);
+                if (user == null)
+                    return NotFound($"Пользователь с ID {userId} не найден");
+
+                var words = await _wordManager.GetRandomWordsForGeneratingTextAsync(userId, category);
+                if (!words.Any())
+                    return NotFound("Недостаточно слов для генерации текста");
+
+                var wordsWithTranslations = words.ToDictionary(w => w.Text, w => w.Translation);
+                var text = await _textGenerator.GenerateTextWithTranslationsAsync(wordsWithTranslations);
+
+                return Ok(text);
             }
             catch (Exception ex)
             {
-                // Возвращаем 500 Internal Server Error с сообщением об ошибке
                 return StatusCode(500, ex.Message);
             }
         }

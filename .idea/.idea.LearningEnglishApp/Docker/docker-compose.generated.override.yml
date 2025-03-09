@@ -1,0 +1,41 @@
+# This is a generated file. Not intended for manual editing.
+version: "3.8"
+services:
+  backend:
+    build:
+      context: "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Backend"
+      dockerfile: "Dockerfile"
+      target: "base"
+    command: []
+    entrypoint:
+    - "dotnet"
+    - "/app/bin/Debug/net8.0/Backend.dll"
+    environment:
+      ASPNETCORE_STATICWEBASSETS: "/app/bin/Debug/net8.0/Backend.staticwebassets.runtime.CT.json"
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+    image: "backend:dev"
+    ports: []
+    volumes:
+    - "/Users/ilakonev/.nuget/packages:/root/.nuget/packages"
+    - "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Backend:/app:rw"
+    - "/Users/ilakonev/RiderProjects/LearningEnglishApp4:/src:rw"
+    working_dir: "/app"
+  frontend:
+    build:
+      context: "/Users/ilakonev/RiderProjects/LearningEnglishApp4/frontend"
+      dockerfile: "Dockerfile"
+      target: "base"
+    command: []
+    entrypoint:
+    - "dotnet"
+    - "/app/bin/Debug/net8.0/Frontend.dll"
+    environment:
+      DOTNET_ENVIRONMENT: "Development"
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+    image: "frontend:dev"
+    ports: []
+    volumes:
+    - "/Users/ilakonev/.nuget/packages:/root/.nuget/packages"
+    - "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend:/app:rw"
+    - "/Users/ilakonev/RiderProjects/LearningEnglishApp4:/src:rw"
+    working_dir: "/app"

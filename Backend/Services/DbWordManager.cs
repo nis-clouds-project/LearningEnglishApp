@@ -18,15 +18,44 @@ public class DbWordManager : IWordManager
         _userManager = userManager;
     }
 
-    public async Task<List<Word>> GetRandomWordsForGeneratingTextAsync(long userId, CategoryType? category = null)
+    /// <summary>
+    /// Получает список изученных слов пользователя.
+    /// </summary>
+    public async Task<List<Word>> GetLearnedWordsAsync(long userId, string? category = null)
+    {
+        var user = await _userManager.GetUserAsync(userId) ?? 
+            throw new UserNotFoundException($"Пользователь с ID {userId} не найден");
+
+        // Получаем слова из словаря пользователя
+        var query = _context.Words
+            .Where(w => user.LearnedWordIds.Contains(w.Id));
+
+        // Фильтруем по категории, если она указана
+        if (!string.IsNullOrEmpty(category))
+        {
+            query = query.Where(w => w.Category == category);
+        }
+
+        return await query.ToListAsync();
+    }
+
+    public async Task<List<Word>> GetRandomWordsForGeneratingTextAsync(long userId, string? category = null)
     {
         var user = await _userManager.GetUserAsync(userId);
 
         // Получаем слова из словаря пользователя
-        var userWords = await _context.Words
-            .Where(w => user.LearnedWordIds.Contains(w.Id))
-            .Where(w => category == null || w.Category == category)
-            .ToListAsync();
+        var query = _context.Words.AsQueryable();
+        
+        // Фильтруем по словам пользователя
+        query = query.Where(w => user.LearnedWordIds.Contains(w.Id));
+        
+        // Фильтруем по категории, если она указана
+        if (!string.IsNullOrEmpty(category))
+        {
+            query = query.Where(w => w.Category == category);
+        }
+
+        var userWords = await query.ToListAsync();
 
         if (!userWords.Any())
         {
@@ -63,16 +92,19 @@ public class DbWordManager : IWordManager
         await _context.SaveChangesAsync();
     }
 
-    public async Task<Word> GetRandomWordForLearningAsync(long userId, CategoryType category)
+    public async Task<Word> GetRandomWordForLearningAsync(long userId, string category)
     {
         var user = await _userManager.GetUserAsync(userId);
 
-        var availableWords = await _context.Words
-            .Where(w => w.Category == category &&
-                       !user.LearnedWordIds.Contains(w.Id) &&
-                       !user.ViewedWordsWordIds.Contains(w.Id))
-            .OrderBy(w => w.LastShown)
-            .ToListAsync();
+        var query = _context.Words.AsQueryable();
+        
+        // Применяем фильтры
+        query = query.Where(w => w.Category == category);
+        query = query.Where(w => !user.LearnedWordIds.Contains(w.Id));
+        query = query.Where(w => !user.ViewedWordsWordIds.Contains(w.Id));
+        query = query.OrderBy(w => w.LastShown);
+
+        var availableWords = await query.ToListAsync();
 
         if (!availableWords.Any())
         {
@@ -89,20 +121,17 @@ public class DbWordManager : IWordManager
 
     public async Task<Word> GetWordByIdAsync(int wordId)
     {
-        var word = await _context.Words
-            .FirstOrDefaultAsync(w => w.Id == wordId);
-
+        var word = await _context.Words.FindAsync(wordId);
         if (word == null)
-        {
-            throw new WordNotFoundException();
-        }
-
+            throw new KeyNotFoundException($"Слово с ID {wordId} не найдено");
         return word;
     }
 
     public async Task<Word> AddCustomWordAsync(long userId, Word word)
     {
         var user = await _userManager.GetUserAsync(userId);
+        if (user == null)
+            throw new KeyNotFoundException($"Пользователь с ID {userId} не найден");
 
         _context.Words.Add(word);
         await _context.SaveChangesAsync();
@@ -111,5 +140,64 @@ public class DbWordManager : IWordManager
         await _context.SaveChangesAsync();
 
         return word;
+    }
+
+    public async Task<Word?> GetRandomWordAsync(User user, string? category = null)
+    {
+        var query = _context.Words.AsQueryable();
+
+        // Исключаем выученные слова
+        if (user.LearnedWordIds.Any())
+        {
+            query = query.Where(w => !user.LearnedWordIds.Contains(w.Id));
+        }
+
+        // Фильтруем по категории, если она указана
+        if (!string.IsNullOrEmpty(category))
+        {
+            query = query.Where(w => w.Category == category);
+        }
+
+        var words = await query.ToListAsync();
+        
+        if (!words.Any())
+            return null;
+
+        // Выбираем случайное слово
+        var randomIndex = _random.Next(words.Count);
+        var word = words[randomIndex];
+
+        // Обновляем время последнего показа
+        word.LastShown = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return word;
+    }
+
+    public async Task<bool> AddWordToVocabularyAsync(User user, int wordId)
+    {
+        var word = await _context.Words.FindAsync(wordId);
+        if (word == null)
+            return false;
+
+        if (!user.LearnedWordIds.Contains(wordId))
+        {
+            user.LearnedWordIds.Add(wordId);
+            // Явно говорим EF, что сущность изменилась
+            _context.Entry(user).Property(u => u.LearnedWordIds).IsModified = true;
+            await _context.SaveChangesAsync();
+        }
+
+        return true;
+    }
+
+    public async Task<List<Word>> GetWordsByCategory(string category)
+    {
+        var query = _context.Words.AsQueryable();
+        
+        return await query
+            .Where(w => w.Category == category)
+            .OrderBy(w => w.Text)
+            .ToListAsync();
     }
 } 

@@ -3,49 +3,43 @@ using System.Text.Json.Serialization;
 namespace Frontend.Models
 {
     /// <summary>
-    /// Класс, представляющий слово для изучения.
-    /// Содержит информацию о слове, его переводе, категории и времени последнего показа.
+    /// Модель слова для изучения.
     /// </summary>
     public class Word
     {
         /// <summary>
-        /// Уникальный идентификатор слова.
+        /// Идентификатор слова.
         /// </summary>
         [JsonPropertyName("id")]
         public int Id { get; set; }
 
         /// <summary>
-        /// Текст слова на изучаемом языке (например, на английском).
+        /// Текст слова на английском языке.
         /// </summary>
         [JsonPropertyName("text")]
-        public string Text { get; set;}
+        public string Text { get; set; } = string.Empty;
 
         /// <summary>
-        /// Перевод слова на родной язык пользователя.
+        /// Перевод слова на русский язык.
         /// </summary>
         [JsonPropertyName("translation")]
-        public string Translation { get; set;}
+        public string Translation { get; set; } = string.Empty;
 
         /// <summary>
-        /// Категория, к которой относится слово (например, "Еда", "Технологии" и т.д.).
+        /// Категория слова.
         /// </summary>
         [JsonPropertyName("category")]
-        public CategoryType Category { get; set;}
+        public string Category { get; set; } = string.Empty;
 
         /// <summary>
-        /// Время последнего показа слова пользователям.
-        /// По умолчанию равно <see cref="DateTime.MinValue"/>, что означает, что слово еще не показывалось.
+        /// Дата последнего показа слова пользователю.
         /// </summary>
         [JsonPropertyName("lastShown")]
-        public DateTime LastShown { get; set;}
+        public DateTime LastShown { get; set; }
 
         /// <summary>
-        /// Переопределение метода <see cref="ToString"/> для удобного вывода слова.
+        /// Переопределение метода ToString для удобного вывода слова.
         /// </summary>
-        /// <returns>Текст слова.</returns>
-        public override string ToString()
-        {
-            return $"{Text}";
-        }
+        public override string ToString() => $"{Text} - {Translation} ({Category})";
     }
 }

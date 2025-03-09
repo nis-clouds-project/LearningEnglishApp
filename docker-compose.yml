@@ -1,4 +1,4 @@
-﻿version: '3.8'
+version: '3.8'
 
 services:
   postgres:
@@ -8,7 +8,6 @@ services:
       POSTGRES_DB: learning_english
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin_password
-      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -28,10 +27,12 @@ services:
     container_name: learning_english_api
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=learning_english;Username=admin;Password=admin_password;Include Error Detail=true;
-      - TZ=UTC
-      - Logging__LogLevel__Default=Debug
-      - Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=Information
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Server=postgres;Port=5432;Database=learning_english;User Id=admin;Password=admin_password;
+      - WAIT_HOSTS=postgres:5432
+      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_SLEEP_INTERVAL=5
+      - WAIT_HOST_CONNECT_TIMEOUT=30
     ports:
       - "8000:80"
     networks:
@@ -39,7 +40,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    restart: unless-stopped
+    entrypoint: []
+    command: >
+      sh -c "/wait &&
+             dotnet tool install --global dotnet-ef &&
+             dotnet ef migrations add InitialCreate --project Backend.csproj &&
+             dotnet ef database update &&
+             dotnet Backend.dll"
 
   frontend:
     build:
@@ -47,19 +54,24 @@ services:
       dockerfile: Dockerfile
     container_name: learning_english_web
     environment:
-      - TZ=UTC
-      - BACKEND_URL=http://backend:80
-    ports:
-      - "3000:80"
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - BACKEND_API_URL=http://backend:80
+      - WAIT_HOSTS=backend:80
+      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_SLEEP_INTERVAL=5
+      - WAIT_HOST_CONNECT_TIMEOUT=30
+    env_file:
+      - .env
     networks:
       - app_network
     depends_on:
       - backend
-    restart: unless-stopped
 
 networks:
   app_network:
+    name: learning_english_network
     driver: bridge
 
 volumes:
   postgres_data:
+    name: learning_english_data 
