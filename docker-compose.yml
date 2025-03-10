@@ -24,6 +24,7 @@ services:
     build:
       context: ./Backend
       dockerfile: Dockerfile
+    image: learning_english_api
     container_name: learning_english_api
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -52,6 +53,7 @@ services:
     build:
       context: ./Frontend
       dockerfile: Dockerfile
+    image: learning_english_web
     container_name: learning_english_web
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
