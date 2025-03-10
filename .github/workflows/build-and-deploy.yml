@@ -1,34 +1,33 @@
+
 on:
   push:
     branches:
-      - main
+      - main  
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
+      - name: Set up Docker
         uses: docker/setup-buildx-action@v2
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
 
       - name: Build Docker images
-        run: |
-          docker-compose -f docker-compose.yml build
+        run: docker-compose -f docker-compose.yml build
 
       - name: Save Docker images
         run: |
           docker save -o backend.tar learning_english_api
           docker save -o frontend.tar learning_english_web
-          docker save -o postgres.tar learning_english_db
 
       - name: Copy images to VM
         uses: appleboy/scp-action@v0.1.3
@@ -36,7 +35,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "backend.tar,frontend.tar,postgres.tar"
+          source: "backend.tar,frontend.tar"
           target: "/home/${{ secrets.VM_USER }}/"
 
       - name: Load Docker images on VM
@@ -48,7 +47,6 @@ jobs:
           script: |
             docker load -i /home/${{ secrets.VM_USER }}/backend.tar
             docker load -i /home/${{ secrets.VM_USER }}/frontend.tar
-            docker load -i /home/${{ secrets.VM_USER }}/postgres.tar
 
       - name: Deploy with docker-compose
         uses: appleboy/ssh-action@v0.1.7
