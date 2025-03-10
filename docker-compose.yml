@@ -16,9 +16,6 @@ services:
       - app_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d learning_english"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   backend:
     build:
@@ -30,10 +27,6 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Server=postgres;Port=5432;Database=learning_english;User Id=admin;Password=admin_password;
-      - WAIT_HOSTS=postgres:5432
-      - WAIT_HOSTS_TIMEOUT=300
-      - WAIT_SLEEP_INTERVAL=5
-      - WAIT_HOST_CONNECT_TIMEOUT=30
     ports:
       - "8000:8000"
     networks:
@@ -43,8 +36,7 @@ services:
         condition: service_healthy
     entrypoint: []
     command: >
-      sh -c "/wait &&
-             dotnet tool install --global dotnet-ef &&
+      sh -c "dotnet tool install --global dotnet-ef &&
              dotnet ef migrations add InitialCreate --project Backend.csproj &&
              dotnet ef database update &&
              dotnet Backend.dll"
@@ -58,10 +50,6 @@ services:
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - BACKEND_API_URL=http://backend:8000
-      - WAIT_HOSTS=backend:80
-      - WAIT_HOSTS_TIMEOUT=300
-      - WAIT_SLEEP_INTERVAL=5
-      - WAIT_HOST_CONNECT_TIMEOUT=30
     env_file:
       - .env
     networks:
