@@ -1,19 +1,17 @@
-name: Deploy to VM
-
 on:
   push:
     branches:
       - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Docker
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
       - name: Log in to Docker Hub
@@ -30,6 +28,7 @@ jobs:
         run: |
           docker save -o backend.tar learning_english_api
           docker save -o frontend.tar learning_english_web
+          docker save -o postgres.tar learning_english_db
 
       - name: Copy images to VM
         uses: appleboy/scp-action@v0.1.3
@@ -37,7 +36,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "backend.tar,frontend.tar"
+          source: "backend.tar,frontend.tar,postgres.tar"
           target: "/home/${{ secrets.VM_USER }}/"
 
       - name: Load Docker images on VM
@@ -49,6 +48,7 @@ jobs:
           script: |
             docker load -i /home/${{ secrets.VM_USER }}/backend.tar
             docker load -i /home/${{ secrets.VM_USER }}/frontend.tar
+            docker load -i /home/${{ secrets.VM_USER }}/postgres.tar
 
       - name: Deploy with docker-compose
         uses: appleboy/ssh-action@v0.1.7
