@@ -16,12 +16,5 @@ WORKDIR /app
 COPY --from=publish /app/publish .
 COPY .env ./
 
-# Install wait script
-RUN apt-get update && \
-    apt-get install -y curl && \
-    curl -SL --output wait https://github.com/ufoscout/docker-compose-wait/releases/download/2.9.0/wait && \
-    chmod +x wait
-
-# Wait for backend and start the application
 ENTRYPOINT ["/bin/sh", "-c"]
 CMD ["/wait && dotnet Frontend.dll"]
