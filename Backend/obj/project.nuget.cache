@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "dgSpecHash": "ozHS6PhjHPc=",
-  "success": false,
+  "dgSpecHash": "5BQsUokKt9M=",
+  "success": true,
   "projectFilePath": "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Backend/Backend.csproj",
   "expectedPackageFiles": [
     "/Users/ilakonev/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
@@ -16,7 +16,7 @@
     "/Users/ilakonev/.nuget/packages/microsoft.entityframeworkcore.analyzers/8.0.2/microsoft.entityframeworkcore.analyzers.8.0.2.nupkg.sha512",
     "/Users/ilakonev/.nuget/packages/microsoft.entityframeworkcore.design/8.0.2/microsoft.entityframeworkcore.design.8.0.2.nupkg.sha512",
     "/Users/ilakonev/.nuget/packages/microsoft.entityframeworkcore.relational/8.0.2/microsoft.entityframeworkcore.relational.8.0.2.nupkg.sha512",
-    "/Users/ilakonev/.nuget/packages/microsoft.entityframeworkcore.tools/9.0.2/microsoft.entityframeworkcore.tools.9.0.2.nupkg.sha512",
+    "/Users/ilakonev/.nuget/packages/microsoft.entityframeworkcore.tools/8.0.2/microsoft.entityframeworkcore.tools.8.0.2.nupkg.sha512",
     "/Users/ilakonev/.nuget/packages/microsoft.extensions.apidescription.server/6.0.5/microsoft.extensions.apidescription.server.6.0.5.nupkg.sha512",
     "/Users/ilakonev/.nuget/packages/microsoft.extensions.caching.abstractions/8.0.0/microsoft.extensions.caching.abstractions.8.0.0.nupkg.sha512",
     "/Users/ilakonev/.nuget/packages/microsoft.extensions.caching.memory/8.0.0/microsoft.extensions.caching.memory.8.0.0.nupkg.sha512",
@@ -54,15 +54,5 @@
     "/Users/ilakonev/.nuget/packages/system.text.json/8.0.0/system.text.json.8.0.0.nupkg.sha512",
     "/Users/ilakonev/.nuget/packages/system.threading.channels/6.0.0/system.threading.channels.6.0.0.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1605",
-      "level": "Error",
-      "message": "Warning As Error: Detected package downgrade: Microsoft.EntityFrameworkCore.Design from 9.0.2 to 8.0.2. Reference the package directly from the project to select a different version. \n Backend -> Microsoft.EntityFrameworkCore.Tools 9.0.2 -> Microsoft.EntityFrameworkCore.Design (>= 9.0.2) \n Backend -> Microsoft.EntityFrameworkCore.Design (>= 8.0.2)",
-      "libraryId": "Microsoft.EntityFrameworkCore.Design",
-      "targetGraphs": [
-        "net8.0"
-      ]
-    }
-  ]
+  "logs": []
 }
