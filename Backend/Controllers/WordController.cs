@@ -1,4 +1,5 @@
 using Backend.Exceptions;
+using Backend.Integrations.Interfaces;
 using Backend.Models;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -15,16 +16,19 @@ namespace Backend.Controllers
     {
         private readonly IWordManager _wordManager;
         private readonly IUserManager _userManager;
+        private readonly ITextGenerator _textGenerator;
 
         /// <summary>
         /// Конструктор для внедрения зависимости IWordManager и IUserManager.
         /// </summary>
         /// <param name="wordManager">Сервис для управления словами.</param>
         /// <param name="userManager">Сервис для управления пользователями.</param>
-        public WordController(IWordManager wordManager, IUserManager userManager)
+        /// <param name="textGenerator">Сервис для генерации текста.</param>
+        public WordController(IWordManager wordManager, IUserManager userManager, ITextGenerator textGenerator)
         {
             _wordManager = wordManager;
             _userManager = userManager;
+            _textGenerator = textGenerator;
         }
 
         /// <summary>
@@ -46,9 +50,16 @@ namespace Backend.Controllers
                     return NotFound("Недостаточно слов для генерации текста");
                 }
 
-                // Формируем простой текст из слов
-                var text = GenerateSimpleText(words);
-                return Ok(text);
+                // Создаем словарь слов с переводами для генерации текста
+                var wordsWithTranslations = words.ToDictionary(w => w.Text, w => w.Translation);
+                
+                var generatedText = await _textGenerator.GenerateTextWithTranslationsAsync(wordsWithTranslations);
+                return Ok(new
+                {
+                    englishText = generatedText.EnglishText,
+                    russianText = generatedText.RussianText,
+                    words = wordsWithTranslations
+                });
             }
             catch (UserNotFoundException ex)
             {
@@ -62,38 +73,6 @@ namespace Backend.Controllers
             {
                 return StatusCode(500, ex.Message);
             }
-        }
-
-        private string GenerateSimpleText(List<Word> words)
-        {
-            var sentences = new List<string>();
-            var random = new Random();
-
-            // Группируем слова по категориям
-            var wordsByCategory = words.GroupBy(w => w.Category);
-
-            foreach (var category in wordsByCategory)
-            {
-                var categoryWords = category.ToList();
-                if (categoryWords.Count >= 3)
-                {
-                    // Создаем простое предложение для каждой категории
-                    var sentence = $"In the {category.Key.ToLower()} category, we have words like " +
-                                 $"{categoryWords[0].Text} ({categoryWords[0].Translation}), " +
-                                 $"{categoryWords[1].Text} ({categoryWords[1].Translation}), and " +
-                                 $"{categoryWords[2].Text} ({categoryWords[2].Translation}).";
-                    sentences.Add(sentence);
-                }
-            }
-
-            if (!sentences.Any())
-            {
-                // Если нет достаточно слов по категориям, создаем общий список
-                var wordList = string.Join(", ", words.Select(w => $"{w.Text} ({w.Translation})"));
-                sentences.Add($"Here are some words from your vocabulary: {wordList}.");
-            }
-
-            return string.Join("\n\n", sentences);
         }
 
         /// <summary>
