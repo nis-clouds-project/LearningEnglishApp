@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: learning_english_db
+    environment:
+      POSTGRES_DB: learning_english
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d learning_english"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: learning_english_api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Server=postgres;Port=5432;Database=learning_english;User Id=admin;Password=admin_password;
+      - WAIT_HOSTS=postgres:5432
+      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_SLEEP_INTERVAL=5
+      - WAIT_HOST_CONNECT_TIMEOUT=30
+    ports:
+      - "8000:80"
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: []
+    command: >
+      sh -c "/wait &&
+             dotnet tool install --global dotnet-ef &&
+             dotnet ef migrations add InitialCreate --project Backend.csproj &&
+             dotnet ef database update &&
+             dotnet Backend.dll"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: learning_english_web
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - BACKEND_API_URL=http://backend:80
+      - WAIT_HOSTS=backend:80
+      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_SLEEP_INTERVAL=5
+      - WAIT_HOST_CONNECT_TIMEOUT=30
+    env_file:
+      - .env
+    networks:
+      - app_network
+    depends_on:
+      - backend
+
+networks:
+  app_network:
+    name: learning_english_network
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: learning_english_data 
