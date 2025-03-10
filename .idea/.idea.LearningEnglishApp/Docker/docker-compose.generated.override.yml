@@ -13,7 +13,7 @@ services:
     environment:
       ASPNETCORE_STATICWEBASSETS: "/app/bin/Debug/net8.0/Backend.staticwebassets.runtime.CT.json"
       DOTNET_USE_POLLING_FILE_WATCHER: "true"
-    image: "backend:dev"
+    image: "learning_english_api:dev"
     ports: []
     volumes:
     - "/Users/ilakonev/.nuget/packages:/root/.nuget/packages"
@@ -22,7 +22,7 @@ services:
     working_dir: "/app"
   frontend:
     build:
-      context: "/Users/ilakonev/RiderProjects/LearningEnglishApp4/frontend"
+      context: "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend"
       dockerfile: "Dockerfile"
       target: "base"
     command: []
@@ -32,7 +32,7 @@ services:
     environment:
       DOTNET_ENVIRONMENT: "Development"
       DOTNET_USE_POLLING_FILE_WATCHER: "true"
-    image: "frontend:dev"
+    image: "learning_english_web:dev"
     ports: []
     volumes:
     - "/Users/ilakonev/.nuget/packages:/root/.nuget/packages"

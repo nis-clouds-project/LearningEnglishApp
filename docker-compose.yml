@@ -35,7 +35,7 @@ services:
       - WAIT_SLEEP_INTERVAL=5
       - WAIT_HOST_CONNECT_TIMEOUT=30
     ports:
-      - "8000:80"
+      - "8000:8000"
     networks:
       - app_network
     depends_on:
@@ -57,7 +57,7 @@ services:
     container_name: learning_english_web
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - BACKEND_API_URL=http://backend:80
+      - BACKEND_API_URL=http://backend:8000
       - WAIT_HOSTS=backend:80
       - WAIT_HOSTS_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=5
