@@ -2,9 +2,6 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 EXPOSE 8000
 
-RUN dotnet tool install --global dotnet-ef
-ENV PATH="$PATH:/root/.dotnet/tools"
-
 COPY ["Backend.csproj", "./"]
 RUN dotnet restore "Backend.csproj"
 

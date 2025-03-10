@@ -23,13 +23,14 @@ services:
     build:
       context: "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend"
       dockerfile: "Dockerfile"
-      target: "build"
+      target: "base"
     command: []
     entrypoint:
     - "dotnet"
     - "/app/bin/Debug/net8.0/Frontend.dll"
     environment:
       DOTNET_ENVIRONMENT: "Development"
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
     image: "learning_english_web:dev"
     ports: []
     volumes:
