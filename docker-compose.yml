@@ -25,7 +25,7 @@ services:
     container_name: learning_english_api
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_URLS=http://+:8000
       - ConnectionStrings__DefaultConnection=Server=postgres;Port=5432;Database=learning_english;User Id=admin;Password=admin_password;
     ports:
       - "8000:8000"
@@ -36,8 +36,7 @@ services:
         condition: service_healthy
     entrypoint: []
     command: >
-      sh -c "dotnet tool install --global dotnet-ef &&
-             dotnet ef migrations add InitialCreate --project Backend.csproj &&
+      sh -c "dotnet ef migrations add InitialCreate --project Backend.csproj &&
              dotnet ef database update &&
              dotnet Backend.dll"
 
