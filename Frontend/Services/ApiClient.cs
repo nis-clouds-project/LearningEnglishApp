@@ -85,46 +85,62 @@ namespace Frontend.Services
             }
         }
 
+        public class GeneratedTextResponse
+        {
+            public string EnglishText { get; set; } = string.Empty;
+            public string RussianText { get; set; } = string.Empty;
+            public Dictionary<string, string> Words { get; set; } = new();
+        }
+
         /// <summary>
         /// Генерирует текст на основе слов из словаря пользователя.
         /// </summary>
         /// <param name="userId">Идентификатор пользователя.</param>
-        /// <param name="category">Категория слов (опционально).</param>
         /// <returns>Сгенерированный текст или null в случае ошибки.</returns>
-        public async Task<string?> GenerateTextFromVocabularyAsync(long userId, string? category = null)
+        public async Task<GeneratedTextResponse?> GenerateTextFromVocabularyAsync(long userId)
         {
             try
             {
                 var url = $"/api/Word/generate-text?userId={userId}";
-                if (!string.IsNullOrEmpty(category))
+                Console.WriteLine($"[GenerateTextFromVocabularyAsync] Отправка GET запроса: {url}");
+                
+                var response = await _httpClient.GetAsync(url);
+                Console.WriteLine($"[GenerateTextFromVocabularyAsync] Получен ответ: {(int)response.StatusCode} {response.StatusCode}");
+                
+                var responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[GenerateTextFromVocabularyAsync] Содержимое ответа: {responseContent}");
+                
+                if (!response.IsSuccessStatusCode)
                 {
-                    url += $"&category={category}";
+                    Console.WriteLine($"[GenerateTextFromVocabularyAsync] Ошибка при генерации текста. Статус: {response.StatusCode}");
+                    return null;
                 }
-                
-                var fullUrl = new Uri(_httpClient.BaseAddress!, url).ToString();
-                Console.WriteLine($"Отправка GET запроса для генерации текста: {fullUrl}");
-                
-                using var response = await _httpClient.GetAsync(url);
-                Console.WriteLine($"Получен ответ: {(int)response.StatusCode} {response.StatusCode}");
-                Console.WriteLine($"Заголовки ответа: {string.Join(", ", response.Headers.Select(h => $"{h.Key}={string.Join(";", h.Value)}"))}");
-                
-                if (response.IsSuccessStatusCode)
+
+                try
                 {
-                    var text = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Получен сгенерированный текст: {text}");
-                    return text;
+                    var result = await response.Content.ReadFromJsonAsync<GeneratedTextResponse>();
+                    if (result != null)
+                    {
+                        Console.WriteLine($"[GenerateTextFromVocabularyAsync] Успешно получен текст:");
+                        Console.WriteLine($"[GenerateTextFromVocabularyAsync] Английский текст: {result.EnglishText}");
+                        Console.WriteLine($"[GenerateTextFromVocabularyAsync] Русский текст: {result.RussianText}");
+                        Console.WriteLine($"[GenerateTextFromVocabularyAsync] Количество слов: {result.Words.Count}");
+                    }
+                    return result;
                 }
-                
-                var error = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Ошибка при генерации текста: {error}");
-                return null;
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[GenerateTextFromVocabularyAsync] Ошибка при десериализации ответа: {ex.Message}");
+                    Console.WriteLine($"[GenerateTextFromVocabularyAsync] Содержимое ответа: {responseContent}");
+                    return null;
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Исключение при генерации текста: {ex}");
-                if (ex is HttpRequestException httpEx)
+                Console.WriteLine($"[GenerateTextFromVocabularyAsync] Ошибка при генерации текста для пользователя {userId}: {ex.Message}");
+                if (ex.InnerException != null)
                 {
-                    Console.WriteLine($"HttpRequestException StatusCode: {httpEx.StatusCode}");
+                    Console.WriteLine($"[GenerateTextFromVocabularyAsync] Inner exception: {ex.InnerException.Message}");
                 }
                 return null;
             }

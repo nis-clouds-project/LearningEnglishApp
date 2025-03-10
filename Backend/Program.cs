@@ -28,6 +28,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IUserManager, DbUserManager>();
 builder.Services.AddScoped<IWordManager, DbWordManager>();
 builder.Services.AddScoped<ITextGenerator, GigaChatTextGenerator>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 
 var app = builder.Build();
 

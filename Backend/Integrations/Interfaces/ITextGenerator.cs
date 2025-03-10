@@ -2,8 +2,10 @@ using Backend.Models;
 
 namespace Backend.Integrations.Interfaces;
 
+public record GeneratedText(string EnglishText, string RussianText);
+
 /// <summary>
-/// Интерфейс для генерации текста.
+/// Интерфейс для сервиса генерации текста.
 /// </summary>
 public interface ITextGenerator
 {
@@ -19,5 +21,5 @@ public interface ITextGenerator
     /// </summary>
     /// <param name="wordsWithTranslations">Словарь слов и их переводов.</param>
     /// <returns>Сгенерированный текст.</returns>
-    Task<string> GenerateTextWithTranslationsAsync(IDictionary<string, string> wordsWithTranslations);
+    Task<GeneratedText> GenerateTextWithTranslationsAsync(IDictionary<string, string> wordsWithTranslations);
 }

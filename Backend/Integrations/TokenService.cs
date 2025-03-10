@@ -1,6 +1,9 @@
 using Backend.Integrations.Interfaces;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Backend.Integrations
 {
@@ -13,11 +16,17 @@ namespace Backend.Integrations
         private const string UrlToGetToken = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth";
 
         private const string Authorization =
-            "Basic NTAwYTgwNjktMDVmMS00YzAyLTlkZjMtNTc3NjRjZGYyNjJkOmUyYTIwYmQ1LTMyYmUtNDIzNC04ZmI2LTA5Y2Y2MzBkYTFjYQ==";
+            "Basic MTUzZjY0YWItZmM1ZC00NTg2LTlmYTYtNDI2MjllMzY0NWY3OjM5N2RlZGZhLTZkYWMtNGQyNi1iZTMzLTNlNzNlYTUwNWIzZQ==";
 
         // Поля для хранения токена и времени его истечения
         private string? _accessToken;
         private DateTime _tokenExpiry = DateTime.MinValue;
+        private readonly ILogger<TokenService> _logger;
+
+        public TokenService(ILogger<TokenService> logger)
+        {
+            _logger = logger;
+        }
 
         /// <summary>
         /// Получает текущий токен доступа. Если токен истек или отсутствует, запрашивает новый.
@@ -28,7 +37,7 @@ namespace Backend.Integrations
         {
             if (string.IsNullOrEmpty(_accessToken) || DateTime.UtcNow >= _tokenExpiry)
             {
-                Console.WriteLine("Токен истек или отсутствует. Запрашиваем новый...");
+                _logger.LogInformation("Токен истек или отсутствует. Запрашиваем новый...");
                 RequestNewToken();
             }
 
@@ -41,37 +50,56 @@ namespace Backend.Integrations
         /// <exception cref="InvalidOperationException">Если запрос на получение токена завершился ошибкой.</exception>
         private void RequestNewToken()
         {
-            var client = new RestClient(UrlToGetToken);
-            var request = BuildRequest();
-
-            var response = client.Execute(request);
-
-            // Проверяем успешность запроса
-            if (!response.IsSuccessful)
+            try
             {
-                throw new InvalidOperationException($"Ошибка при получении токена: {response.ErrorMessage}");
-            }
+                var options = new RestClientOptions(UrlToGetToken)
+                {
+                    RemoteCertificateValidationCallback = (sender, certificate, chain, errors) =>
+                    {
+                        _logger.LogInformation("Проверка SSL сертификата. Ошибки: {Errors}", errors);
+                        return true; // Принимаем любой сертификат
+                    },
+                    MaxTimeout = 10000 // 10 секунд таймаут
+                };
 
-            // Проверяем наличие содержимого в ответе
-            if (string.IsNullOrEmpty(response.Content))
+                var client = new RestClient(options);
+                var request = BuildRequest();
+
+                _logger.LogInformation("Отправка запроса на получение токена");
+                var response = client.Execute(request);
+                _logger.LogInformation("Получен ответ. Статус: {Status}", response.StatusCode);
+
+                if (!response.IsSuccessful)
+                {
+                    _logger.LogError("Ошибка при получении токена. Статус: {Status}, Ошибка: {Error}, Содержимое: {Content}", 
+                        response.StatusCode, response.ErrorMessage, response.Content);
+                    throw new InvalidOperationException($"Ошибка при получении токена: {response.ErrorMessage}");
+                }
+
+                if (string.IsNullOrEmpty(response.Content))
+                {
+                    _logger.LogError("Получен пустой ответ от сервера");
+                    throw new InvalidOperationException("Пустой ответ от сервера при запросе токена.");
+                }
+
+                _logger.LogInformation("Десериализация ответа: {Content}", response.Content);
+                var tokenResponse = JsonConvert.DeserializeObject<TokenResponse>(response.Content);
+
+                if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
+                {
+                    _logger.LogError("Неверный формат ответа от сервера");
+                    throw new InvalidOperationException("Неверный формат ответа от сервера: отсутствует токен.");
+                }
+
+                _accessToken = tokenResponse.AccessToken;
+                _tokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn - 300);
+                _logger.LogInformation("Токен успешно получен. Истекает: {Expiry}", _tokenExpiry);
+            }
+            catch (Exception ex)
             {
-                throw new InvalidOperationException("Пустой ответ от сервера при запросе токена.");
+                _logger.LogError(ex, "Ошибка при запросе нового токена");
+                throw;
             }
-
-            // Десериализация ответа
-
-            var tokenResponse = JsonConvert.DeserializeObject<TokenResponse>(response.Content);
-
-
-            if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
-            {
-                throw new InvalidOperationException("Неверный формат ответа от сервера: отсутствует токен.");
-            }
-
-            // Сохраняем токен и время его истечения
-            _accessToken = tokenResponse.AccessToken;
-            _tokenExpiry =
-                DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn - 300); // Обновляем токен за 5 минут до истечения
         }
 
         /// <summary>

@@ -31,6 +31,9 @@ namespace Frontend.Managers
 
         private static CancellationTokenSource? _cts;
 
+        // Добавляем словарь для хранения сгенерированных текстов
+        private static readonly Dictionary<long, ApiClient.GeneratedTextResponse> _generatedTexts = new();
+
         /// <summary>
         /// Запускает бота и начинает обработку входящих сообщений.
         /// </summary>
@@ -166,74 +169,36 @@ namespace Frontend.Managers
             {
                 Console.WriteLine($"Получен callback с данными: {data}");
 
-                if (data.StartsWith("learn_"))
+                switch (data)
                 {
-                    var category = data[6..];
-                    Console.WriteLine($"Обработка команды изучения для категории: {category}");
-                    await HandleCategoryLearning(chatId.Value, category, cancellationToken);
-                }
-                else if (data.StartsWith("known_"))
-                {
-                    var idString = data[6..];
-                    Console.WriteLine($"Обработка известного слова с ID строкой: {idString}");
-                    if (int.TryParse(idString, out var wordId))
-                    {
-                        Console.WriteLine($"ID слова успешно преобразован: {wordId}");
-                        await HandleKnownWord(chatId.Value, wordId, cancellationToken);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Не удалось преобразовать ID слова из строки: {idString}");
-                        await _bot!.SendTextMessageAsync(
-                            chatId: chatId.Value,
-                            text: "Произошла ошибка при обработке слова. Пожалуйста, попробуйте еще раз.",
-                            cancellationToken: cancellationToken);
-                    }
-                }
-                else if (data.StartsWith("show_translation_"))
-                {
-                    var idString = data["show_translation_".Length..];
-                    Console.WriteLine($"Обработка показа перевода с ID строкой: {idString}");
-                    Console.WriteLine($"Длина строки ID: {idString.Length}");
-                    Console.WriteLine($"Содержимое строки ID: '{idString}'");
-                    
-                    if (int.TryParse(idString, out var wordId))
-                    {
-                        Console.WriteLine($"ID слова успешно преобразован: {wordId}");
-                        try 
+                    case var s when s.StartsWith("learn_"):
+                        var category = s[6..];
+                        await HandleCategoryLearning(chatId.Value, category, cancellationToken);
+                        break;
+                    case var s when s.StartsWith("known_"):
+                        var idString = s[6..];
+                        if (int.TryParse(idString, out var wordId))
                         {
-                            await HandleShowTranslation(chatId.Value, wordId, cancellationToken);
+                            await HandleKnownWord(chatId.Value, wordId, cancellationToken);
                         }
-                        catch (Exception ex)
+                        break;
+                    case var s when s.StartsWith("show_translation_"):
+                        var translationIdString = s["show_translation_".Length..];
+                        if (int.TryParse(translationIdString, out var translationWordId))
                         {
-                            Console.WriteLine($"Исключение в HandleShowTranslation: {ex.Message}");
-                            Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                            throw; // Пробрасываем исключение для общей обработки
+                            await HandleShowTranslation(chatId.Value, translationWordId, cancellationToken);
                         }
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Не удалось преобразовать ID слова из строки: '{idString}'");
-                        await _bot!.SendTextMessageAsync(
-                            chatId: chatId.Value,
-                            text: "Произошла ошибка при показе перевода. Пожалуйста, попробуйте еще раз.",
-                            cancellationToken: cancellationToken);
-                    }
-                }
-                else if (data.StartsWith("next_"))
-                {
-                    var category = data[5..];
-                    Console.WriteLine($"Обработка следующего слова для категории: {category}");
-                    await HandleCategoryLearning(chatId.Value, category, cancellationToken);
-                }
-                else if (data == "return_menu")
-                {
-                    Console.WriteLine("Возврат в главное меню");
-                    await HandleStartCommand(chatId.Value, cancellationToken);
-                }
-                else
-                {
-                    Console.WriteLine($"Получен неизвестный тип callback данных: {data}");
+                        break;
+                    case var s when s.StartsWith("next_"):
+                        var nextCategory = s[5..];
+                        await HandleCategoryLearning(chatId.Value, nextCategory, cancellationToken);
+                        break;
+                    case "return_menu":
+                        await HandleStartCommand(chatId.Value, cancellationToken);
+                        break;
+                    default:
+                        Console.WriteLine($"Получен неизвестный тип callback данных: {data}");
+                        break;
                 }
 
                 await _bot!.AnswerCallbackQueryAsync(
@@ -286,9 +251,9 @@ namespace Frontend.Managers
                                    "Доступные команды:\n" +
                                    "📚 /learn - Начать изучение слов\n" +
                                    "❓ /help - Показать справку\n" +
-                                   "/categories - показать доступные категории слов\n" +
-                                   "/generate - сгенерировать текст на основе изученных слов\n" +
-                                   "/vocabulary - Просмотреть изученные слова";
+                                   "📚 /categories - показать доступные категории слов\n" +
+                                   "📚 /generate - сгенерировать текст на основе изученных слов\n" +
+                                   "📚 /vocabulary - Просмотреть изученные слова";
 
                 await _bot!.SendTextMessageAsync(
                     chatId: chatId,
@@ -506,7 +471,7 @@ namespace Frontend.Managers
                     Console.WriteLine($"[HandleShowTranslation] Inner exception stack trace: {ex.InnerException.StackTrace}");
                 }
                 
-                throw; // Пробрасываем исключение для общей обработки
+                throw;
             }
         }
 
@@ -601,8 +566,9 @@ namespace Frontend.Managers
         {
             try
             {
-                var text = await _apiClient!.GenerateTextFromVocabularyAsync(chatId);
-                if (string.IsNullOrEmpty(text))
+                Console.WriteLine($"[HandleGenerateCommand] Начало генерации текста для пользователя {chatId}");
+                var generatedText = await _apiClient!.GenerateTextFromVocabularyAsync(chatId);
+                if (generatedText == null)
                 {
                     await _bot!.SendTextMessageAsync(
                         chatId: chatId,
@@ -611,14 +577,41 @@ namespace Frontend.Managers
                     return;
                 }
 
+                // Ensure that generatedText contains both English and Russian text
+                Console.WriteLine($"[HandleGenerateCommand] Текст успешно получен, длина английского текста: {generatedText.EnglishText.Length}");
+
+                _generatedTexts[chatId] = generatedText; 
+
+                var keyboard = new InlineKeyboardMarkup(new[]
+                {
+                    new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData(
+                            text: "🔙 Вернуться в меню",
+                            callbackData: "return_menu")
+                    }
+                });
+
+                var message = new StringBuilder();
+                message.AppendLine("📝 Сгенерированный текст на основе ваших слов:\n");
+                message.AppendLine(generatedText.EnglishText);
+                message.AppendLine(generatedText.RussianText);
+                message.AppendLine("\n📚 Использованные слова:");
+                foreach (var word in generatedText.Words)
+                {
+                    message.AppendLine($"• {word.Key}");
+                }
+
+                Console.WriteLine($"[HandleGenerateCommand] Отправка сообщения пользователю, длина сообщения: {message.Length}");
                 await _bot!.SendTextMessageAsync(
                     chatId: chatId,
-                    text: $"Сгенерированный текст:\n\n{text}",
+                    text: message.ToString(),
+                    replyMarkup: keyboard,
                     cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при генерации текста: {ex}");
+                Console.WriteLine($"[HandleGenerateCommand] Ошибка при генерации текста: {ex}");
                 await _bot!.SendTextMessageAsync(
                     chatId: chatId,
                     text: "Извините, произошла ошибка при генерации текста. Пожалуйста, попробуйте позже.",
