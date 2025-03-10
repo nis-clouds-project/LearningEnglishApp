@@ -1,19 +1,22 @@
-﻿FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
-WORKDIR /app
-
+﻿# Используем образ SDK для сборки
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY ["Frontend.csproj", "./"]
-RUN dotnet restore "Frontend.csproj"
+
+RUN dotnet tool install --global dotnet-ef
+ENV PATH="$PATH:/root/.dotnet/tools"
+
+COPY ["Backend.csproj", "./"]
+RUN dotnet restore "Backend.csproj"
+
 COPY . .
-RUN dotnet build "Frontend.csproj" -c Release -o /app/build
+RUN dotnet build "Backend.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "Frontend.csproj" -c Release -o /app/publish
+RUN dotnet publish "Backend.csproj" -c Release -o /app/publish
 
-FROM base AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
-COPY --from=publish /app/publish .
-COPY .env ./
 
-ENTRYPOINT ["dotnet", "Frontend.dll"] 
+COPY --from=publish /app/publish .
+
+ENTRYPOINT ["dotnet", "Backend.dll"]
