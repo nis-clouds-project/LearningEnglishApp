@@ -5,14 +5,13 @@ services:
     build:
       context: "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Backend"
       dockerfile: "Dockerfile"
-      target: "base"
+      target: "build"
     command: []
     entrypoint:
     - "dotnet"
     - "/app/bin/Debug/net8.0/Backend.dll"
     environment:
       ASPNETCORE_STATICWEBASSETS: "/app/bin/Debug/net8.0/Backend.staticwebassets.runtime.CT.json"
-      DOTNET_USE_POLLING_FILE_WATCHER: "true"
     image: "learning_english_api:dev"
     ports: []
     volumes:
@@ -24,14 +23,13 @@ services:
     build:
       context: "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend"
       dockerfile: "Dockerfile"
-      target: "base"
+      target: "build"
     command: []
     entrypoint:
     - "dotnet"
     - "/app/bin/Debug/net8.0/Frontend.dll"
     environment:
       DOTNET_ENVIRONMENT: "Development"
-      DOTNET_USE_POLLING_FILE_WATCHER: "true"
     image: "learning_english_web:dev"
     ports: []
     volumes:
