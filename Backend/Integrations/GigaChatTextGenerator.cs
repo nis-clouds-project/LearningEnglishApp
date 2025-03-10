@@ -21,17 +21,65 @@ namespace Backend.Integrations
         private static readonly ITokenService TokenService = new TokenService();
 
         /// <summary>
-        /// Генерирует текст на основе списка слов, используя GigaChat API.
+        /// Генерирует текст на основе списка слов.
         /// </summary>
-        /// <param name="words">Список слов, на основе которых будет сгенерирован текст.</param>
-        /// <returns>Сгенерированный текст.</returns>
-        /// <exception cref="InvalidOperationException">Если запрос к API завершился ошибкой.</exception>
-        /// <exception cref="JsonException">Если не удалось десериализовать ответ сервера.</exception>
-        public string GenerateText(List<Word> words)
+        public async Task<string> GenerateTextAsync(IEnumerable<string> words)
         {
-            // Формируем промпт для запроса к API
-            string promt = BuildPromt(words);
+            try
+            {
+                var wordList = words.ToList();
+                if (!wordList.Any())
+                {
+                    return "No words provided for text generation.";
+                }
 
+                // Формируем промпт для запроса к API
+                string prompt = $"Generate a text in English using the following words: {string.Join(", ", wordList)}. " +
+                              "The text should be natural and engaging, using the provided words in context.";
+
+                return await GenerateTextWithPrompt(prompt);
+            }
+            catch (Exception ex)
+            {
+                return $"Failed to generate text using GigaChat API. Using fallback: Here are the words: {string.Join(", ", words)}.";
+            }
+        }
+
+        /// <summary>
+        /// Генерирует текст на основе слов с их переводами.
+        /// </summary>
+        public async Task<string> GenerateTextWithTranslationsAsync(IDictionary<string, string> wordsWithTranslations)
+        {
+            try
+            {
+                if (!wordsWithTranslations.Any())
+                {
+                    return "No words provided for text generation.";
+                }
+
+                // Формируем промпт для запроса к API с учетом переводов
+                var wordPairs = wordsWithTranslations.Select(w => $"{w.Key} ({w.Value})");
+                string prompt = "Create a bilingual story in English and Russian. " +
+                              $"Use these English words with their Russian translations: {string.Join(", ", wordPairs)}. " +
+                              "First write a paragraph in English using all the English words naturally in context. " +
+                              "Then provide a Russian translation of the same story, incorporating the Russian translations. " +
+                              "Make the story engaging and connected.";
+
+                return await GenerateTextWithPrompt(prompt);
+            }
+            catch (Exception ex)
+            {
+                var sentences = new List<string>();
+                foreach (var pair in wordsWithTranslations)
+                {
+                    sentences.Add($"The word '{pair.Key}' means '{pair.Value}' in Russian.");
+                }
+                return string.Join("\n", sentences);
+            }
+        }
+
+        private async Task<string> GenerateTextWithPrompt(string prompt)
+        {
             try
             {
                 // Получаем токен доступа
@@ -41,7 +89,7 @@ namespace Backend.Integrations
                 var client = new RestClient(UrlToMakeRequest);
 
                 // Создаем и настраиваем запрос
-                var request = BuildRequest(accessToken, promt);
+                var request = BuildRequest(accessToken, prompt);
 
                 // Отправляем запрос и получаем ответ
                 var response = client.Execute(request);
@@ -49,7 +97,7 @@ namespace Backend.Integrations
                 // Проверяем успешность запроса
                 if (!response.IsSuccessful)
                 {
-                    throw new InvalidOperationException($"Ошибка при выполнении запроса: {response.ErrorMessage}");
+                    throw new InvalidOperationException($"Error during request: {response.ErrorMessage}");
                 }
 
                 // Извлекаем сгенерированный текст из ответа сервера
@@ -57,44 +105,36 @@ namespace Backend.Integrations
             }
             catch (Exception ex)
             {
-                // Обрабатываем исключения и выбрасываем новое исключение с понятным сообщением
-                throw new InvalidOperationException("Ошибка при генерации текста.", ex);
+                throw new InvalidOperationException("Failed to generate text with GigaChat API.", ex);
             }
         }
 
         /// <summary>
         /// Создает и настраивает запрос к GigaChat API.
         /// </summary>
-        /// <param name="accessToken">Токен доступа для авторизации.</param>
-        /// <param name="message">Сообщение (промпт), которое будет отправлено в API.</param>
-        /// <returns>Настроенный запрос.</returns>
         private RestRequest BuildRequest(string accessToken, string message)
         {
-            // Создаем POST-запрос
             var request = new RestRequest("", Method.Post);
 
-            // Добавляем заголовки
             request.AddHeader("Accept", "application/json");
             request.AddHeader("Authorization", $"Bearer {accessToken}");
             request.AddHeader("Content-Type", "application/json");
 
-            // Формируем тело запроса в формате JSON
             var requestBody = new
             {
-                model = "GigaChat", // Указываем модель, которую используем
+                model = "GigaChat",
                 messages = new[]
                 {
                     new
                     {
-                        role = "user", // Роль пользователя
-                        content = message // Сообщение пользователя (промпт)
+                        role = "user",
+                        content = message
                     }
                 },
-                temperature = 0.7, // Параметр случайности (от 0 до 1)
-                max_tokens = 400 // Максимальное количество токенов в ответе
+                temperature = 0.7,
+                max_tokens = 1000
             };
 
-            // Добавляем тело запроса в формате JSON
             request.AddJsonBody(requestBody);
             return request;
         }
@@ -102,51 +142,36 @@ namespace Backend.Integrations
         /// <summary>
         /// Извлекает сгенерированный текст из ответа сервера.
         /// </summary>
-        /// <param name="response">Ответ сервера.</param>
-        /// <returns>Сгенерированный текст.</returns>
-        /// <exception cref="JsonException">Если не удалось десериализовать ответ сервера.</exception>
-        /// <exception cref="InvalidOperationException">Если ответ сервера не содержит ожидаемых данных.</exception>
         private string GetAnswer(RestResponse response)
         {
-            // Проверяем, что ответ не пустой
             if (response.Content == null)
             {
-                throw new InvalidOperationException("Пустой ответ от сервера.");
+                throw new InvalidOperationException("Empty response from server.");
             }
-
-            // Логируем ответ сервера для отладки
-            Console.WriteLine("Ответ от сервера:");
-            Console.WriteLine(response.Content);
 
             try
             {
-                // Парсим JSON-ответ
                 var jsonResponse = JsonSerializer.Deserialize<JsonElement>(response.Content);
-
-                // Извлекаем сгенерированный текст из JSON
                 var generatedText = jsonResponse
-                    .GetProperty("choices")[0] // Первый элемент массива choices
-                    .GetProperty("message") // Объект message
-                    .GetProperty("content") // Поле content
-                    .GetString(); // Получаем значение как строку
+                    .GetProperty("choices")[0]
+                    .GetProperty("message")
+                    .GetProperty("content")
+                    .GetString();
 
-                // Проверяем, что текст не пустой
                 if (string.IsNullOrEmpty(generatedText))
                 {
-                    throw new InvalidOperationException("Ответ сервера не содержит сгенерированного текста.");
+                    throw new InvalidOperationException("Server response does not contain generated text.");
                 }
 
                 return generatedText;
             }
             catch (JsonException ex)
             {
-                // Обрабатываем ошибки десериализации
-                throw new JsonException("Ошибка десериализации ответа сервера.", ex);
+                throw new JsonException("Error deserializing server response.", ex);
             }
             catch (Exception ex)
             {
-                // Обрабатываем другие ошибки
-                throw new InvalidOperationException("Ошибка при обработке ответа сервера.", ex);
+                throw new InvalidOperationException("Error processing server response.", ex);
             }
         }
 

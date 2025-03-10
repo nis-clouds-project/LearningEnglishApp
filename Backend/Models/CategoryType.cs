@@ -3,70 +3,25 @@ namespace Backend.Models;
 /// <summary>
 /// Перечисление, представляющее различные категории слов для изучения.
 /// </summary>
-public enum CategoryType
+public class CategoryType
 {
-    /// <summary>
-    /// Категория для изучения слов, связанных с едой, напитками и кулинарией.
-    /// </summary>
-    Food,
+    public const string Food = "Food";
+    public const string Technology = "Technology";
+    public const string Business = "Business";
+    public const string Travel = "Travel";
+    public const string Health = "Health";
+    public const string Education = "Education";
+    public const string Entertainment = "Entertainment";
+    public const string Sports = "Sports";
 
-    /// <summary>
-    /// Категория для изучения слов, связанных с внешностью (части тела, прическа, макияж и т.д.).
-    /// </summary>
-    Appearance,
-
-    /// <summary>
-    /// Категория для изучения слов, связанных с мебелью и предметами интерьера.
-    /// </summary>
-    Furniture,
-
-    /// <summary>
-    /// Категория для изучения слов, связанных с бизнесом, предпринимательством и управлением.
-    /// </summary>
-    Business,
-
-    /// <summary>
-    /// Категория для изучения слов, связанных с технологиями, гаджетами и IT.
-    /// </summary>
-    Technology,
-
-    /// <summary>
-    /// Категория для изучения слов, связанных с одеждой, обувью и аксессуарами.
-    /// </summary>
-    Clothing,
-
-    /// <summary>
-    /// Категория для изучения слов, связанных с путешествиями, туризмом и транспортом.
-    /// </summary>
-    Travel,
-
-    /// <summary>
-    /// Категория для изучения слов, описывающих черты характера и личностные качества.
-    /// </summary>
-    PersonalityTraits,
-
-    /// <summary>
-    /// Категория для изучения слов, связанных с экологией, природой и окружающей средой.
-    /// </summary>
-    Ecology,
-
-    /// <summary>
-    /// Категория для изучения слов, связанных с семьей, родственниками и отношениями.
-    /// </summary>
-    Family,
-
-    /// <summary>
-    /// Категория для изучения слов, связанных с маркетингом, рекламой и продвижением.
-    /// </summary>
-    Marketing,
-
-    /// <summary>
-    /// Категория для изучения слов, связанных с финансами, деньгами и экономикой.
-    /// </summary>
-    Money,
-
-    /// <summary>
-    /// Категория для изучения слов, связанных с городом, инфраструктурой и городской жизнью.
-    /// </summary>
-    City
+    public static readonly string[] AllCategories = {
+        Food,
+        Technology,
+        Business,
+        Travel,
+        Health,
+        Education,
+        Entertainment,
+        Sports
+    };
 }

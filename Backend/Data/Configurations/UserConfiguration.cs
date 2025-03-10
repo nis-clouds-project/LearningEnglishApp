@@ -32,4 +32,4 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
                 v => JsonConvert.SerializeObject(v),
                 v => JsonConvert.DeserializeObject<Dictionary<DateTime, int>>(v) ?? new Dictionary<DateTime, int>());
     }
-} 
+}
