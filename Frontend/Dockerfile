@@ -16,5 +16,4 @@ WORKDIR /app
 COPY --from=publish /app/publish .
 COPY .env ./
 
-ENTRYPOINT ["/bin/sh", "-c"]
-CMD ["/wait && dotnet Frontend.dll"]
+CMD ["dotnet Frontend.dll"]
