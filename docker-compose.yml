@@ -50,7 +50,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./Frontend
       dockerfile: Dockerfile
     container_name: learning_english_web
     environment:
