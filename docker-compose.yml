@@ -36,9 +36,9 @@ services:
         condition: service_healthy
     entrypoint: []
     command: >
-      sh -c "dotnet ef migrations add InitialCreate --project Backend.csproj &&
-             dotnet ef database update &&
-             dotnet Backend.dll"
+     sh -c "dotnet tool install --global dotnet-ef --version 8.* &&
+            dotnet ef database update --project Backend.csproj && 
+            dotnet Backend.dll"
 
   frontend:
     build:
