@@ -16,6 +16,9 @@ services:
       - app_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d learning_english"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -34,11 +37,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    entrypoint: []
-    command: >
-     sh -c "dotnet tool install --global dotnet-ef --version 8.* &&
-            dotnet ef database update --project Backend.csproj && 
-            dotnet Backend.dll"
 
   frontend:
     build:
@@ -63,4 +61,4 @@ networks:
 
 volumes:
   postgres_data:
-    name: learning_english_data 
+    name: learning_english_data
