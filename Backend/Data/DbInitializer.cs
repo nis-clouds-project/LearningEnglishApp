@@ -6,15 +6,12 @@ namespace Backend.Data;
 
 public static class DbInitializer
 {
-    // Константы
-    public const long SystemUserId = 1; // ID для системного пользователя
+    public const long SystemUserId = 1; 
     
     public static async Task Initialize(AppDbContext context)
     {
-        // Убедимся, что база данных создана
         await context.Database.EnsureCreatedAsync();
 
-        // Создаем системного пользователя, если его нет
         if (!await context.Users.AnyAsync(u => u.Id == SystemUserId))
         {
             Console.WriteLine("Creating system user...");
@@ -30,42 +27,47 @@ public static class DbInitializer
             Console.WriteLine("System user created successfully");
         }
         
-        // Проверяем, есть ли уже категории
         var hasCategories = await context.Categories.AnyAsync();
         Console.WriteLine($"Has existing categories: {hasCategories}");
 
         if (!hasCategories)
         {
             Console.WriteLine("Adding categories...");
-            // Добавляем базовые категории
-            var categories = new List<Category>
+            // Получаем уникальные категории из InitialWords
+            var uniqueCategories = InitialWords
+                .Select(w => w.category)
+                .Distinct()
+                .Select(name => new Category { Name = name })
+                .ToList();
+
+            // Добавляем специальные категории, если их нет
+            var specialCategories = new[]
             {
-                new Category { Name = "My Words" },
-                new Category { Name = "Common Words" },
-                new Category { Name = "Business" },
-                new Category { Name = "Technology" },
-                new Category { Name = "Travel" },
-                new Category { Name = "Education" },
-                new Category { Name = "Science" },
-                new Category { Name = "Arts" },
-                new Category { Name = "Sports" },
-                new Category { Name = "Health" },
-                new Category { Name = "Food" }
+                "My Words",
+                "Common Words",
+                "Business",
+                "Technology",
+                "Education",
+                "Science",
+                "Arts",
+                "Sports",
+                "Health",
+                "Food"
             };
 
-            await context.Categories.AddRangeAsync(categories);
+            foreach (var categoryName in specialCategories)
+            {
+                if (!uniqueCategories.Any(c => c.Name == categoryName))
+                {
+                    uniqueCategories.Add(new Category { Name = categoryName });
+                }
+            }
+
+            await context.Categories.AddRangeAsync(uniqueCategories);
             await context.SaveChangesAsync();
-            Console.WriteLine($"Added {categories.Count} categories");
+            Console.WriteLine($"Added {uniqueCategories.Count} categories");
         }
 
-        // Получаем ID категории "My Words" (она должна быть первой)
-        var myWordsCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "My Words");
-        if (myWordsCategory == null)
-        {
-            throw new Exception("My Words category not found");
-        }
-
-        // Проверяем, есть ли уже слова
         var hasWords = await context.Words.AnyAsync();
         Console.WriteLine($"Has existing words: {hasWords}");
 
@@ -75,74 +77,16 @@ public static class DbInitializer
             var categories = await context.Categories.ToListAsync();
             Console.WriteLine($"Found {categories.Count} categories for word initialization");
             
-            var commonWordsCategory = categories.First(c => c.Name == "Common Words");
-            var businessCategory = categories.First(c => c.Name == "Business");
-            var technologyCategory = categories.First(c => c.Name == "Technology");
-            var travelCategory = categories.First(c => c.Name == "Travel");
-            var educationCategory = categories.First(c => c.Name == "Education");
-
-            var words = new List<Word>
+            var words = new List<Word>();
+            
+            foreach (var (text, translation, categoryName) in InitialWords)
             {
-                // Common Words
-                CreateWord("hello", "привет", commonWordsCategory.Id),
-                CreateWord("goodbye", "до свидания", commonWordsCategory.Id),
-                CreateWord("thank you", "спасибо", commonWordsCategory.Id),
-                CreateWord("please", "пожалуйста", commonWordsCategory.Id),
-                CreateWord("sorry", "извините", commonWordsCategory.Id),
-                CreateWord("friend", "друг", commonWordsCategory.Id),
-                CreateWord("family", "семья", commonWordsCategory.Id),
-                CreateWord("love", "любовь", commonWordsCategory.Id),
-                CreateWord("time", "время", commonWordsCategory.Id),
-                CreateWord("day", "день", commonWordsCategory.Id),
-
-                // Business
-                CreateWord("meeting", "встреча", businessCategory.Id),
-                CreateWord("report", "отчет", businessCategory.Id),
-                CreateWord("contract", "контракт", businessCategory.Id),
-                CreateWord("deadline", "срок", businessCategory.Id),
-                CreateWord("manager", "менеджер", businessCategory.Id),
-                CreateWord("budget", "бюджет", businessCategory.Id),
-                CreateWord("client", "клиент", businessCategory.Id),
-                CreateWord("project", "проект", businessCategory.Id),
-                CreateWord("strategy", "стратегия", businessCategory.Id),
-                CreateWord("investment", "инвестиция", businessCategory.Id),
-
-                // Technology
-                CreateWord("computer", "компьютер", technologyCategory.Id),
-                CreateWord("internet", "интернет", technologyCategory.Id),
-                CreateWord("software", "программное обеспечение", technologyCategory.Id),
-                CreateWord("hardware", "аппаратное обеспечение", technologyCategory.Id),
-                CreateWord("database", "база данных", technologyCategory.Id),
-                CreateWord("algorithm", "алгоритм", technologyCategory.Id),
-                CreateWord("network", "сеть", technologyCategory.Id),
-                CreateWord("security", "безопасность", technologyCategory.Id),
-                CreateWord("cloud", "облако", technologyCategory.Id),
-                CreateWord("programming", "программирование", technologyCategory.Id),
-
-                // Travel
-                CreateWord("airport", "аэропорт", travelCategory.Id),
-                CreateWord("hotel", "отель", travelCategory.Id),
-                CreateWord("passport", "паспорт", travelCategory.Id),
-                CreateWord("ticket", "билет", travelCategory.Id),
-                CreateWord("luggage", "багаж", travelCategory.Id),
-                CreateWord("vacation", "отпуск", travelCategory.Id),
-                CreateWord("journey", "путешествие", travelCategory.Id),
-                CreateWord("destination", "место назначения", travelCategory.Id),
-                CreateWord("tourist", "турист", travelCategory.Id),
-                CreateWord("guide", "гид", travelCategory.Id),
-
-                // Education
-                CreateWord("student", "студент", educationCategory.Id),
-                CreateWord("teacher", "учитель", educationCategory.Id),
-                CreateWord("school", "школа", educationCategory.Id),
-                CreateWord("university", "университет", educationCategory.Id),
-                CreateWord("lesson", "урок", educationCategory.Id),
-                CreateWord("homework", "домашнее задание", educationCategory.Id),
-                CreateWord("exam", "экзамен", educationCategory.Id),
-                CreateWord("knowledge", "знание", educationCategory.Id),
-                CreateWord("education", "образование", educationCategory.Id),
-                CreateWord("study", "учиться", educationCategory.Id)
-            };
+                var category = categories.FirstOrDefault(c => c.Name == categoryName);
+                if (category != null)
+                {
+                    words.Add(CreateWord(text, translation, category.Id));
+                }
+            }
 
             Console.WriteLine($"Preparing to add {words.Count} words");
             await context.Words.AddRangeAsync(words);
@@ -163,4 +107,160 @@ public static class DbInitializer
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    private static readonly List<(string text, string translation, string category)> InitialWords = new()
+    {
+        // Common Words
+        ("hello", "привет", "Common Words"),
+        ("goodbye", "до свидания", "Common Words"),
+        ("thank you", "спасибо", "Common Words"),
+        ("please", "пожалуйста", "Common Words"),
+        ("sorry", "извините", "Common Words"),
+        ("yes", "да", "Common Words"),
+        ("no", "нет", "Common Words"),
+        ("good morning", "доброе утро", "Common Words"),
+        ("good evening", "добрый вечер", "Common Words"),
+        ("good night", "спокойной ночи", "Common Words"),
+        ("today", "сегодня", "Common Words"),
+        ("tomorrow", "завтра", "Common Words"),
+        ("yesterday", "вчера", "Common Words"),
+        ("now", "сейчас", "Common Words"),
+        ("later", "позже", "Common Words"),
+        
+        // Business
+        ("meeting", "встреча", "Business"),
+        ("report", "отчет", "Business"),
+        ("contract", "контракт", "Business"),
+        ("deadline", "срок", "Business"),
+        ("manager", "менеджер", "Business"),
+        ("budget", "бюджет", "Business"),
+        ("client", "клиент", "Business"),
+        ("project", "проект", "Business"),
+        ("strategy", "стратегия", "Business"),
+        ("investment", "инвестиция", "Business"),
+        ("profit", "прибыль", "Business"),
+        ("market", "рынок", "Business"),
+        ("company", "компания", "Business"),
+        ("office", "офис", "Business"),
+        ("salary", "зарплата", "Business"),
+        
+        // Technology
+        ("computer", "компьютер", "Technology"),
+        ("phone", "телефон", "Technology"),
+        ("internet", "интернет", "Technology"),
+        ("email", "электронная почта", "Technology"),
+        ("website", "веб-сайт", "Technology"),
+        ("software", "программное обеспечение", "Technology"),
+        ("hardware", "аппаратное обеспечение", "Technology"),
+        ("network", "сеть", "Technology"),
+        ("database", "база данных", "Technology"),
+        ("application", "приложение", "Technology"),
+        ("program", "программа", "Technology"),
+        ("device", "устройство", "Technology"),
+        ("screen", "экран", "Technology"),
+        ("keyboard", "клавиатура", "Technology"),
+        ("mouse", "мышь", "Technology"),
+        
+        // Education
+        ("student", "студент", "Education"),
+        ("teacher", "учитель", "Education"),
+        ("school", "школа", "Education"),
+        ("university", "университет", "Education"),
+        ("lesson", "урок", "Education"),
+        ("homework", "домашнее задание", "Education"),
+        ("exam", "экзамен", "Education"),
+        ("knowledge", "знание", "Education"),
+        ("education", "образование", "Education"),
+        ("study", "учиться", "Education"),
+        ("book", "книга", "Education"),
+        ("notebook", "тетрадь", "Education"),
+        ("pen", "ручка", "Education"),
+        ("pencil", "карандаш", "Education"),
+        ("library", "библиотека", "Education"),
+        
+        // Science
+        ("experiment", "эксперимент", "Science"),
+        ("research", "исследование", "Science"),
+        ("theory", "теория", "Science"),
+        ("hypothesis", "гипотеза", "Science"),
+        ("laboratory", "лаборатория", "Science"),
+        ("scientist", "ученый", "Science"),
+        ("discovery", "открытие", "Science"),
+        ("chemistry", "химия", "Science"),
+        ("physics", "физика", "Science"),
+        ("biology", "биология", "Science"),
+        ("mathematics", "математика", "Science"),
+        ("equation", "уравнение", "Science"),
+        ("molecule", "молекула", "Science"),
+        ("atom", "атом", "Science"),
+        ("energy", "энергия", "Science"),
+        
+        // Arts
+        ("painting", "картина", "Arts"),
+        ("music", "музыка", "Arts"),
+        ("dance", "танец", "Arts"),
+        ("theater", "театр", "Arts"),
+        ("cinema", "кино", "Arts"),
+        ("artist", "художник", "Arts"),
+        ("musician", "музыкант", "Arts"),
+        ("actor", "актер", "Arts"),
+        ("sculpture", "скульптура", "Arts"),
+        ("photography", "фотография", "Arts"),
+        ("concert", "концерт", "Arts"),
+        ("exhibition", "выставка", "Arts"),
+        ("gallery", "галерея", "Arts"),
+        ("performance", "выступление", "Arts"),
+        ("creativity", "творчество", "Arts"),
+        
+        // Sports
+        ("football", "футбол", "Sports"),
+        ("basketball", "баскетбол", "Sports"),
+        ("tennis", "теннис", "Sports"),
+        ("volleyball", "волейбол", "Sports"),
+        ("swimming", "плавание", "Sports"),
+        ("running", "бег", "Sports"),
+        ("cycling", "велоспорт", "Sports"),
+        ("athlete", "спортсмен", "Sports"),
+        ("competition", "соревнование", "Sports"),
+        ("training", "тренировка", "Sports"),
+        ("coach", "тренер", "Sports"),
+        ("team", "команда", "Sports"),
+        ("victory", "победа", "Sports"),
+        ("medal", "медаль", "Sports"),
+        ("championship", "чемпионат", "Sports"),
+        
+        // Health
+        ("doctor", "врач", "Health"),
+        ("hospital", "больница", "Health"),
+        ("medicine", "лекарство", "Health"),
+        ("health", "здоровье", "Health"),
+        ("disease", "болезнь", "Health"),
+        ("treatment", "лечение", "Health"),
+        ("pharmacy", "аптека", "Health"),
+        ("nurse", "медсестра", "Health"),
+        ("patient", "пациент", "Health"),
+        ("symptoms", "симптомы", "Health"),
+        ("prescription", "рецепт", "Health"),
+        ("vaccination", "вакцинация", "Health"),
+        ("recovery", "выздоровление", "Health"),
+        ("diet", "диета", "Health"),
+        ("exercise", "упражнение", "Health"),
+        
+        // Food
+        ("apple", "яблоко", "Food"),
+        ("bread", "хлеб", "Food"),
+        ("water", "вода", "Food"),
+        ("coffee", "кофе", "Food"),
+        ("tea", "чай", "Food"),
+        ("milk", "молоко", "Food"),
+        ("juice", "сок", "Food"),
+        ("meat", "мясо", "Food"),
+        ("fish", "рыба", "Food"),
+        ("vegetable", "овощ", "Food"),
+        ("fruit", "фрукт", "Food"),
+        ("cheese", "сыр", "Food"),
+        ("egg", "яйцо", "Food"),
+        ("chicken", "курица", "Food"),
+        ("rice", "рис", "Food")
+    };
 } 

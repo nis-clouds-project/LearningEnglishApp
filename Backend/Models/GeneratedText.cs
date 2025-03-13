@@ -1,13 +1,16 @@
-public class GeneratedText
+namespace Backend.Models
 {
-    public string EnglishText { get; set; }
-    public string RussianText { get; set; }
-    public Dictionary<string, string> Words { get; set; }
-
-    public GeneratedText(string englishText, string russianText)
+    public class GeneratedText
     {
-        EnglishText = englishText;
-        RussianText = russianText;
-        Words = new Dictionary<string, string>();
+        public string EnglishText { get; set; }
+        public string RussianText { get; set; }
+        public Dictionary<string, string> Words { get; set; }
+
+        public GeneratedText(string englishText, string russianText)
+        {
+            EnglishText = englishText;
+            RussianText = russianText;
+            Words = new Dictionary<string, string>();
+        }
     }
 } 

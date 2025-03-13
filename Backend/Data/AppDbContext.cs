@@ -18,12 +18,10 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // Применяем конфигурации
         modelBuilder.ApplyConfiguration(new UserConfiguration());
         modelBuilder.ApplyConfiguration(new WordConfiguration());
         modelBuilder.ApplyConfiguration(new CategoryConfiguration());
 
-        // Дополнительные настройки для таблиц many-to-many
         modelBuilder.Entity<User>()
             .HasMany(u => u.LearnedWords)
             .WithMany(w => w.LearnedByUsers)
@@ -44,17 +42,14 @@ public class AppDbContext : DbContext
                 j.Property("ViewedByUsersId").HasColumnName("user_id");
             });
 
-        // Глобальные настройки для всех таблиц
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            // Используем snake_case для имен таблиц
             var tableName = entityType.GetTableName();
             if (tableName != null)
             {
                 entityType.SetTableName(tableName.ToLower());
             }
 
-            // Используем snake_case для имен столбцов
             foreach (var property in entityType.GetProperties())
             {
                 var columnName = property.GetColumnName();

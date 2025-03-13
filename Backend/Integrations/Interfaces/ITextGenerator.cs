@@ -1,8 +1,8 @@
+using Backend.Integrations;
 using Backend.Models;
 
 namespace Backend.Integrations.Interfaces;
 
-public record GeneratedText(string EnglishText, string RussianText);
 
 /// <summary>
 /// Интерфейс для сервиса генерации текста.
