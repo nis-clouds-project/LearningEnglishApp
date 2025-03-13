@@ -68,7 +68,6 @@ public class Word
         CreatedAt = DateTime.UtcNow;
         IsCustom = false;
         
-        // Инициализация навигационных свойств
         LearnedByUsers = new List<User>();
         ViewedByUsers = new List<User>();
     }
@@ -82,7 +81,6 @@ public class Word
         CreatedAt = DateTime.UtcNow;
         IsCustom = false;
         
-        // Инициализация навигационных свойств
         LearnedByUsers = new List<User>();
         ViewedByUsers = new List<User>();
     }

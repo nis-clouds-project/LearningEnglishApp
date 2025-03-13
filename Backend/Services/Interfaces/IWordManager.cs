@@ -81,4 +81,11 @@ public interface IWordManager
     /// </summary>
     /// <returns>Список всех категорий.</returns>
     Task<List<Category>> GetAllCategoriesAsync();
+
+    /// <summary>
+    /// Получает случайное слово из категории "My Words" для пользователя.
+    /// </summary>
+    /// <param name="userId">Идентификатор пользователя.</param>
+    /// <returns>Случайное слово из категории "My Words" или null, если слов нет.</returns>
+    Task<Word?> GetRandomCustomWordAsync(long userId);
 }

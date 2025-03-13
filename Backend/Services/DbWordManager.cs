@@ -340,4 +340,57 @@ public class DbWordManager : IWordManager
             return new List<Word>();
         }
     }
+
+    /// <inheritdoc />
+    public async Task<Word?> GetRandomCustomWordAsync(long userId)
+    {
+        try
+        {
+            var user = await _userManager.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                _logger.LogWarning("User {UserId} not found", userId);
+                return null;
+            }
+
+            var myWordsCategory = await _context.Categories
+                .FirstOrDefaultAsync(c => c.Name == "My Words");
+            
+            if (myWordsCategory == null)
+            {
+                _logger.LogError("My Words category not found");
+                return null;
+            }
+
+            var userWords = await _context.Words
+                .Include(w => w.Category)
+                .Where(w => w.category_id == myWordsCategory.Id && w.user_id == userId)
+                .ToListAsync();
+            
+            if (!userWords.Any())
+            {
+                _logger.LogInformation("No words found in My Words category for user {UserId}", userId);
+                return null;
+            }
+
+            // Используем learned_words из объекта пользователя
+            var availableWords = userWords
+                .Where(w => !user.learned_words.Contains(w.Id))
+                .ToList();
+
+            if (!availableWords.Any())
+            {
+                _logger.LogInformation("All words in My Words category have been learned for user {UserId}", userId);
+                return null;
+            }
+
+            var randomWord = availableWords[_random.Next(availableWords.Count)];
+            return randomWord;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting random custom word for user {UserId}", userId);
+            throw;
+        }
+    }
 } 

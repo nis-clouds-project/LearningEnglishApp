@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using Frontend.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Frontend.Services
 {
@@ -9,6 +10,7 @@ namespace Frontend.Services
     public class ApiClient : IDisposable
     {
         private readonly HttpClient _httpClient;
+        private readonly ILogger<ApiClient> _logger;
         private bool _disposed;
 
         public ApiClient(string baseUrl)
@@ -19,6 +21,7 @@ namespace Frontend.Services
                 Timeout = TimeSpan.FromSeconds(30)
             };
             _httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+            _logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<ApiClient>();
         }
 
         /// <summary>
@@ -29,6 +32,7 @@ namespace Frontend.Services
         {
             try
             {
+                _logger.LogInformation("Getting categories");
                 var response = await _httpClient.GetAsync("api/Word/categories");
                 
                 if (response.IsSuccessStatusCode)
@@ -38,10 +42,13 @@ namespace Frontend.Services
                 }
                 
                 var error = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to get categories. Status: {Status}, Error: {Error}", 
+                    response.StatusCode, error);
                 return null;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error getting categories");
                 return null;
             }
         }
@@ -52,11 +59,16 @@ namespace Frontend.Services
         /// <param name="userId">Идентификатор пользователя.</param>
         /// <param name="categoryId">Идентификатор категории (опционально).</param>
         /// <returns>Список изученных слов или null в случае ошибки.</returns>
-        public async Task<List<Word>?> GetLearnedWordsAsync(long userId)
+        public async Task<List<Word>?> GetLearnedWordsAsync(long userId, long? categoryId = null)
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/Word/learned?userId={userId}");
+                var url = categoryId.HasValue 
+                    ? $"api/Word/learned?userId={userId}&categoryId={categoryId}"
+                    : $"api/Word/learned?userId={userId}";
+                
+                _logger.LogInformation("Getting learned words for user {UserId}", userId);
+                var response = await _httpClient.GetAsync(url);
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -65,10 +77,13 @@ namespace Frontend.Services
                 }
                 
                 var error = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to get learned words. Status: {Status}, Error: {Error}", 
+                    response.StatusCode, error);
                 return null;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error getting learned words for user {UserId}", userId);
                 return null;
             }
         }
@@ -90,7 +105,6 @@ namespace Frontend.Services
                     return result;
                 }
                 
-                var error = await response.Content.ReadAsStringAsync();
                 return null;
             }
             catch (Exception ex)
@@ -108,12 +122,20 @@ namespace Frontend.Services
         {
             try
             {
+                _logger.LogInformation("Checking if user exists: {UserId}", userId);
                 var response = await _httpClient.GetAsync($"api/User/exists?userId={userId}");
-                var result = response.IsSuccessStatusCode;
-                return result;
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var exists = await response.Content.ReadFromJsonAsync<bool>();
+                    return exists;
+                }
+                
+                return false;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error checking user existence {UserId}", userId);
                 return false;
             }
         }
@@ -123,60 +145,28 @@ namespace Frontend.Services
         /// </summary>
         /// <param name="userId">Идентификатор пользователя.</param>
         /// <returns>true, если пользователь успешно добавлен; иначе false.</returns>
-        public async Task<bool> AddUserAsync(long userId)
+        public async Task<User?> AddUserAsync(long userId)
         {
             try
             {
-                var existsResponse = await _httpClient.GetAsync($"api/user/{userId}");
-                if (existsResponse.IsSuccessStatusCode)
-                {
-                    return true;
-                }
-
-                var endpoint = "api/user/add";
-                
-                var content = new StringContent(userId.ToString(), System.Text.Encoding.UTF8, "application/json");
-                var response = await _httpClient.PostAsync(endpoint, content);
+                _logger.LogInformation("Adding new user: {UserId}", userId);
+                var response = await _httpClient.PostAsJsonAsync("api/User/add", userId);
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    return true;
+                    var user = await response.Content.ReadFromJsonAsync<User>();
+                    _logger.LogInformation("Successfully added user {UserId}", userId);
+                    return user;
                 }
                 
-                if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
-                {
-                    return true;
-                }
-                
-                return false;
-            }
-            catch (Exception ex)
-            {
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Получает список слов в категории.
-        /// </summary>
-        /// <param name="categoryId">Идентификатор категории</param>
-        /// <returns>Список слов в категории или null в случае ошибки</returns>
-        public async Task<List<Word>?> GetWordsByCategoryAsync(long categoryId)
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync($"api/Word/category/{categoryId}");
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    var words = await response.Content.ReadFromJsonAsync<List<Word>>();
-                    return words;
-                }
-                
+                var error = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to add user {UserId}. Status: {Status}, Error: {Error}", 
+                    userId, response.StatusCode, error);
                 return null;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error adding user {UserId}", userId);
                 return null;
             }
         }
@@ -187,56 +177,31 @@ namespace Frontend.Services
         /// <param name="userId">Идентификатор пользователя.</param>
         /// <param name="categoryId">Идентификатор категории (опционально).</param>
         /// <returns>Случайное слово или null в случае ошибки.</returns>
-        public async Task<Word?> GetRandomWordAsync(long userId, long? categoryId)
+        public async Task<Word?> GetRandomWordAsync(long userId, long? categoryId = null)
         {
             try
             {
-                if (categoryId.HasValue)
-                {
-                    var categories = await GetCategoriesAsync();
-                    if (categories?.Any(c => c.Id == categoryId) != true)
-                    {
-                        return null;
-                    }
-
-                    var categoryWords = await GetWordsByCategoryAsync(categoryId.Value);
-                    if (categoryWords == null || !categoryWords.Any())
-                    {
-                        return null;
-                    }
-
-                    var learnedWords = await GetLearnedWordsAsync(userId);
-                    var learnedWordIds = learnedWords?.Select(w => w.Id).ToHashSet() ?? new HashSet<long>();
-
-                    var availableWords = categoryWords.Where(w => !learnedWordIds.Contains(w.Id)).ToList();
-                    if (!availableWords.Any())
-                    {
-                        return null;
-                    }
-
-                }
-
                 var url = categoryId.HasValue 
                     ? $"api/Word/random?userId={userId}&categoryId={categoryId}"
                     : $"api/Word/random?userId={userId}";
                 
+                _logger.LogInformation("Getting random word for user {UserId} from category {CategoryId}", userId, categoryId);
                 var response = await _httpClient.GetAsync(url);
                 
-                if (!response.IsSuccessStatusCode)
+                if (response.IsSuccessStatusCode)
                 {
-                    return null;
+                    var word = await response.Content.ReadFromJsonAsync<Word>();
+                    return word;
                 }
                 
-                var word = await response.Content.ReadFromJsonAsync<Word>();
-                if (word == null)
-                {
-                    return null;
-                }
-                
-                return word;
+                var error = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to get random word. Status: {Status}, Error: {Error}", 
+                    response.StatusCode, error);
+                return null;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error getting random word for user {UserId}", userId);
                 return null;
             }
         }
@@ -247,21 +212,27 @@ namespace Frontend.Services
         /// <param name="userId">Идентификатор пользователя.</param>
         /// <param name="wordId">Идентификатор слова.</param>
         /// <returns>true, если слово успешно добавлено; иначе false.</returns>
-        public async Task<bool> AddWordToVocabularyAsync(long userId, int wordId)
+        public async Task<bool> AddWordToVocabularyAsync(long userId, long wordId)
         {
             try
             {
+                _logger.LogInformation("Adding word {WordId} to vocabulary for user {UserId}", wordId, userId);
                 var response = await _httpClient.PostAsync($"api/Word/vocabulary/add?userId={userId}&wordId={wordId}", null);
                 
                 if (response.IsSuccessStatusCode)
                 {
+                    _logger.LogInformation("Successfully added word {WordId} to vocabulary for user {UserId}", wordId, userId);
                     return true;
                 }
                 
+                var error = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to add word to vocabulary. Status: {Status}, Error: {Error}", 
+                    response.StatusCode, error);
                 return false;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error adding word {WordId} to vocabulary for user {UserId}", wordId, userId);
                 return false;
             }
         }
@@ -269,11 +240,12 @@ namespace Frontend.Services
         /// <summary>
         /// Получает слово по его идентификатору.
         /// </summary>
-        public async Task<Word?> GetWordByIdAsync(int wordId)
+        public async Task<Word?> GetWordByIdAsync(long wordId)
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/word/{wordId}");
+                _logger.LogInformation("Getting word: {WordId}", wordId);
+                var response = await _httpClient.GetAsync($"api/Word/{wordId}");
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -281,78 +253,75 @@ namespace Frontend.Services
                     return word;
                 }
                 
+                var error = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Word {WordId} not found. Status: {Status}, Error: {Error}", 
+                    wordId, response.StatusCode, error);
                 return null;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error getting word {WordId}", wordId);
+                return null;
+            }
+        }
+        
+        public async Task<Word?> AddCustomWordAsync(long userId, string text, string translation)
+        {
+            try
+            {
+                _logger.LogInformation("Adding custom word for user {UserId}: {Text} - {Translation}", 
+                    userId, text, translation);
+
+                var request = new CustomWordRequest
+                {
+                    UserId = userId,
+                    Text = text?.Trim(),
+                    Translation = translation?.Trim()
+                };
+
+                var response = await _httpClient.PostAsJsonAsync("api/Word/custom", request);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var word = await response.Content.ReadFromJsonAsync<Word>();
+                    _logger.LogInformation("Successfully added custom word {WordId} for user {UserId}", 
+                        word?.Id, userId);
+                    return word;
+                }
+
+                var error = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to add custom word. Status: {Status}, Error: {Error}", 
+                    response.StatusCode, error);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding custom word for user {UserId}", userId);
                 return null;
             }
         }
 
-        /// <summary>
-        /// Сохраняет текущую категорию обучения пользователя.
-        /// </summary>
-        /// <param name="userId">Идентификатор пользователя</param>
-        /// <param name="categoryId">Идентификатор категории</param>
-        public async Task<bool> SaveUserLearningCategoryAsync(long userId, long categoryId)
+        public async Task<Word?> GetRandomCustomWordAsync(long userId)
         {
             try
             {
-                var userResponse = await _httpClient.GetAsync($"api/User/{userId}");
-                if (!userResponse.IsSuccessStatusCode)
-                {
-                    return false;
-                }
-
-                var user = await userResponse.Content.ReadFromJsonAsync<User>();
-                if (user == null)
-                {
-                    return false;
-                }
-
-                user.current_learning_category = categoryId;
-
-                var content = JsonContent.Create(user);
-                var response = await _httpClient.PutAsync($"api/User/{userId}", content);
+                _logger.LogInformation("Getting random custom word for user {UserId}", userId);
+                var response = await _httpClient.GetAsync($"api/Word/custom/random?userId={userId}");
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    return true;
+                    var word = await response.Content.ReadFromJsonAsync<Word>();
+                    return word;
                 }
                 
-                return false;
+                var error = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to get random custom word. Status: {Status}, Error: {Error}", 
+                    response.StatusCode, error);
+                return null;
             }
             catch (Exception ex)
             {
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Получает текущую категорию обучения пользователя.
-        /// </summary>
-        /// <param name="userId">Идентификатор пользователя</param>
-        /// <returns>ID категории или null, если категория не установлена</returns>
-        public async Task<long?> GetUserLearningCategoryAsync(long userId)
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync($"api/User/{userId}");
-                if (!response.IsSuccessStatusCode)
-                {
-                    return null;
-                }
-
-                var user = await response.Content.ReadFromJsonAsync<User>();
-                if (user?.current_learning_category == null)
-                {
-                    return null;
-                }
-
-                return user.current_learning_category;
-            }
-            catch (Exception ex)
-            {
+                _logger.LogError(ex, "Error getting random custom word for user {UserId}", userId);
                 return null;
             }
         }
