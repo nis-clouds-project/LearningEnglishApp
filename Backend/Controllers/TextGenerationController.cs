@@ -1,3 +1,4 @@
+using Backend.Controllers.Responses;
 using Backend.Integrations.Interfaces;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -46,17 +47,14 @@ namespace Backend.Controllers
         {
             try
             {
-                // Получаем изученные слова пользователя
                 var words = await _wordManager.GetLearnedWordsAsync(userId, categoryId);
                 if (!words.Any())
                 {
                     return BadRequest("No learned words found for text generation");
                 }
 
-                // Создаем словарь слов с переводами
                 var wordsDict = words.ToDictionary(w => w.Text, w => w.Translation);
 
-                // Генерируем текст
                 var generatedText = await _textGenerator.GenerateTextWithTranslationsAsync(wordsDict);
 
                 var response = new GeneratedTextResponse
@@ -73,13 +71,6 @@ namespace Backend.Controllers
                 _logger.LogError(ex, "Error generating text for userId: {UserId}", userId);
                 return StatusCode(500, "Error generating text");
             }
-        }
-
-        public class GeneratedTextResponse
-        {
-            public string EnglishText { get; set; } = string.Empty;
-            public string RussianText { get; set; } = string.Empty;
-            public Dictionary<string, string> Words { get; set; } = new();
         }
     }
 }

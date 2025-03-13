@@ -1,9 +1,6 @@
 using Backend.Integrations.Interfaces;
 using Backend.Models;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using RestSharp;
-using System.Text.Json;
 
 using JsonElement = System.Text.Json.JsonElement;
 using JsonException = System.Text.Json.JsonException;
@@ -49,7 +46,6 @@ namespace Backend.Integrations
                     return "No words provided for text generation.";
                 }
 
-                // Формируем промпт для запроса к API
                 string prompt = $"Generate a text in English using the following words: {string.Join(", ", wordList)}. " +
                               "The text should be natural and engaging, using the provided words in context.";
 
@@ -66,99 +62,129 @@ namespace Backend.Integrations
         /// <summary>
         /// Генерирует текст на основе слов с их переводами.
         /// </summary>
-        public async Task<GeneratedText> GenerateTextWithTranslationsAsync(IDictionary<string, string> wordsWithTranslations)
+        public async Task<GeneratedText> GenerateTextWithTranslationsAsync(IDictionary<string, string> words)
         {
             try
             {
-                _logger.LogInformation("Начало генерации текста с переводами. Количество слов: {Count}", wordsWithTranslations.Count);
-                
-                if (!wordsWithTranslations.Any())
+                _logger.LogInformation("Generating text with {Count} words", words.Count);
+
+                var prompt = BuildPromptWithTranslations(words);
+                var generatedText = await GenerateTextWithPrompt(prompt);
+                var (englishText, russianText, usedWords) = ParseGeneratedText(generatedText);
+
+                return new GeneratedText(englishText, russianText)
                 {
-                    _logger.LogWarning("Попытка генерации текста без слов");
-                    return new GeneratedText("No words provided.", "Слова не предоставлены.");
-                }
-
-                var prompt = BuildPromptWithTranslations(wordsWithTranslations);
-                _logger.LogInformation("Сформирован промпт для GigaChat: {Prompt}", prompt);
-
-                var result = await GenerateTextWithPrompt(prompt);
-                _logger.LogInformation("Текст успешно сгенерирован. Длина текста: {Length}", result.Length);
-
-                // Разделяем английский и русский текст
-                var (englishText, russianText) = SplitGeneratedText(result);
-                return new GeneratedText(englishText, russianText);
+                    Words = usedWords
+                };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка при генерации текста с переводами");
-                return GenerateFallbackText(wordsWithTranslations);
+                _logger.LogError(ex, "Error generating text with translations");
+                return GenerateFallbackText(words);
             }
         }
 
-        private (string EnglishText, string RussianText) SplitGeneratedText(string text)
+        private (string EnglishText, string RussianText, Dictionary<string, string> Words) ParseGeneratedText(string text)
         {
             try
             {
-                _logger.LogInformation("Начало разделения текста на английскую и русскую части");
-        
-                // Разделяем текст по двойному переносу строки
-                var parts = text.Split(new[] { "\n\n", "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-        
-                if (parts.Length >= 2)
+                _logger.LogInformation("Starting to parse generated text");
+                
+                var englishText = string.Empty;
+                var russianText = string.Empty;
+                var words = new Dictionary<string, string>();
+
+                // Extract English text
+                var englishStartMarker = "===ENGLISH_TEXT_START===";
+                var englishEndMarker = "===ENGLISH_TEXT_END===";
+                var englishStart = text.IndexOf(englishStartMarker);
+                var englishEnd = text.IndexOf(englishEndMarker);
+                
+                if (englishStart != -1 && englishEnd != -1)
                 {
-                    // Проверяем, какая часть содержит русский текст (кириллицу)
-                    var firstPartHasRussian = parts[0].Any(c => c >= 'а' && c <= 'я' || c >= 'А' && c <= 'Я');
-                    var secondPartHasRussian = parts[1].Any(c => c >= 'а' && c <= 'я' || c >= 'А' && c <= 'Я');
-        
-                    // Если первая часть содержит русский текст, а вторая — английский
-                    if (firstPartHasRussian && !secondPartHasRussian)
+                    englishStart += englishStartMarker.Length;
+                    englishText = text.Substring(englishStart, englishEnd - englishStart).Trim();
+                }
+
+                // Extract Russian text
+                var russianStartMarker = "===RUSSIAN_TEXT_START===";
+                var russianEndMarker = "===RUSSIAN_TEXT_END===";
+                var russianStart = text.IndexOf(russianStartMarker);
+                var russianEnd = text.IndexOf(russianEndMarker);
+                
+                if (russianStart != -1 && russianEnd != -1)
+                {
+                    russianStart += russianStartMarker.Length;
+                    russianText = text.Substring(russianStart, russianEnd - russianStart).Trim();
+                }
+
+                // Extract words
+                var wordsStartMarker = "===USED_WORDS_START===";
+                var wordsEndMarker = "===USED_WORDS_END===";
+                var wordsStart = text.IndexOf(wordsStartMarker);
+                var wordsEnd = text.IndexOf(wordsEndMarker);
+                
+                if (wordsStart != -1 && wordsEnd != -1)
+                {
+                    wordsStart += wordsStartMarker.Length;
+                    var wordsSection = text.Substring(wordsStart, wordsEnd - wordsStart);
+                    
+                    foreach (var line in wordsSection.Split('\n', StringSplitOptions.RemoveEmptyEntries))
                     {
-                        _logger.LogInformation("Первая часть определена как русский текст, вторая — как английский");
-                        return (parts[1].Trim(), parts[0].Trim());
-                    }
-                    // Если вторая часть содержит русский текст, а первая — английский
-                    else if (!firstPartHasRussian && secondPartHasRussian)
-                    {
-                        _logger.LogInformation("Первая часть определена как английский текст, вторая — как русский");
-                        return (parts[0].Trim(), parts[1].Trim());
+                        var parts = line.Trim().Split(':', 2);
+                        if (parts.Length == 2)
+                        {
+                            words[parts[0].Trim()] = parts[1].Trim();
+                        }
                     }
                 }
-        
-                // Если не удалось разделить, анализируем весь текст
-                var isEnglishText = text.Count(c => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) >
-                                    text.Count(c => (c >= 'а' && c <= 'я') || (c >= 'А' && c <= 'Я'));
-        
-                if (isEnglishText)
+
+                if (string.IsNullOrEmpty(englishText) || string.IsNullOrEmpty(russianText))
                 {
-                    _logger.LogWarning("Текст не удалось разделить, весь текст определен как английский");
-                    return (text.Trim(), "Перевод не был предоставлен.");
+                    _logger.LogWarning("Failed to extract text using markers. Response format was incorrect");
+                    return ("Error: Invalid response format", "Ошибка: Неверный формат ответа", new Dictionary<string, string>());
                 }
-                else
-                {
-                    _logger.LogWarning("Текст не удалось разделить, весь текст определен как русский");
-                    return ("Text was not provided in English.", text.Trim());
-                }
+
+                _logger.LogInformation("Successfully parsed generated text. Found {WordCount} words", words.Count);
+                return (englishText, russianText, words);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка при разделении текста на английскую и русскую части");
-                return (text.Trim(), "Ошибка при выделении перевода.");
+                _logger.LogError(ex, "Error parsing generated text");
+                return ("Error generating text", "Ошибка генерации текста", new Dictionary<string, string>());
             }
         }
 
         private string BuildPromptWithTranslations(IDictionary<string, string> wordsWithTranslations)
         {
-            var wordPairs = wordsWithTranslations.Select(w => $"{w.Key} ({w.Value})");
-            return "Create a bilingual story using the following English words with their Russian translations: " +
-                   $"{string.Join(", ", wordPairs)}.\n\n" +
-                   "Instructions:\n" +
-                   "1. First, write an engaging paragraph in English using all the English words naturally in context.\n" +
-                   "2. Then, add two newlines and write a Russian translation of the same story.\n" +
-                   "3. Make sure to use all provided words in a natural and connected way.\n" +
-                   "4. The story should be engaging and meaningful.\n\n" +
-                   "Format your response as:\n" +
-                   "[English text]\n\n" +
-                   "[Russian translation]";
+            var wordsList = string.Join("\n", wordsWithTranslations.Select(w => $"- {w.Key}: {w.Value}"));
+            
+            return @$"You are a story generator that creates engaging short stories in English and Russian.
+
+Words to use (must use ALL of them):
+{wordsList}
+
+Generate a response in EXACTLY this format (keep all markers and sections):
+
+===ENGLISH_TEXT_START===
+[Your English story goes here, using ALL provided words]
+===ENGLISH_TEXT_END===
+
+===RUSSIAN_TEXT_START===
+[Russian translation of the story goes here]
+===RUSSIAN_TEXT_END===
+
+===USED_WORDS_START===
+[List each used word and its translation, one per line]
+===USED_WORDS_END===
+
+Rules:
+1. Use ALL provided words in the English text
+2. Make the story natural and engaging
+3. Provide accurate Russian translation
+4. List ALL used words with translations
+5. Keep ALL section markers exactly as shown
+6. Do not add any text outside the marked sections";
         }
 
         private GeneratedText GenerateFallbackText(IDictionary<string, string> wordsWithTranslations)
@@ -191,7 +217,7 @@ namespace Backend.Integrations
                     RemoteCertificateValidationCallback = (sender, certificate, chain, errors) =>
                     {
                         _logger.LogInformation("Проверка SSL сертификата. Ошибки: {Errors}", errors);
-                        return true; // Принимаем любой сертификат
+                        return true;
                     },
                     Timeout = TimeSpan.FromSeconds(30)
                 };

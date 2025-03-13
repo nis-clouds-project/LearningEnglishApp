@@ -1,0 +1,19 @@
+{
+  "Version": 1,
+  "Hash": "prCjMNLTJP7rsTWhQwFXiWA76V7ITaZGaafQaEDOFu8=",
+  "Source": "Backend",
+  "BasePath": "_content/Backend",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "Backend/wwwroot",
+      "Source": "Backend",
+      "ContentRoot": "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Backend/wwwroot/",
+      "BasePath": "_content/Backend",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": []
+}

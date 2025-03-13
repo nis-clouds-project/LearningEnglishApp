@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 
 namespace Frontend.Managers
 {
@@ -7,39 +6,53 @@ namespace Frontend.Managers
         Initial,
         ChoosingCategory,
         Learning,
+        GeneratingText,
         ViewingVocabulary,
-        GeneratingText
-    }
-
-    public class UserStageManager
+        AddingWord,
+        AddingTranslation
+    }   
+    
+    public static class UserStageManager
     {
-        private static readonly ConcurrentDictionary<long, UserStage> _userStages = new();
-        private static readonly ConcurrentDictionary<long, long?> _userCurrentCategory = new();
-
+        private static readonly Dictionary<long, UserStage> _userStages = new();
+        private static readonly Dictionary<long, long?> _userCurrentCategories = new();
+        private static readonly Dictionary<long, string> _tempWordStorage = new();  
         public static UserStage GetUserStage(long userId)
         {
-            return _userStages.GetOrAdd(userId, UserStage.Initial);
-        }
-
+            return _userStages.TryGetValue(userId, out var stage) ? stage : UserStage.Initial;
+        }   
         public static void SetUserStage(long userId, UserStage stage)
         {
-            _userStages.AddOrUpdate(userId, stage, (_, _) => stage);
-        }
-
-        public static void SetUserCurrentCategory(long userId, long? categoryId)
-        {
-            _userCurrentCategory.AddOrUpdate(userId, categoryId, (_, _) => categoryId);
-        }
-        
-        public static long? GetUserCurrentCategory(long userId)
-        {
-            return _userCurrentCategory.TryGetValue(userId, out var categoryId) ? categoryId : null;
-        }
-
+            _userStages[userId] = stage;
+        }   
         public static void ResetUserState(long userId)
         {
-            _userStages.TryRemove(userId, out _);
-            _userCurrentCategory.TryRemove(userId, out _);
+            _userStages[userId] = UserStage.Initial;
+            _userCurrentCategories.Remove(userId);
+            _tempWordStorage.Remove(userId);
+        }   
+        public static long? GetUserCurrentCategory(long userId)
+        {
+            return _userCurrentCategories.TryGetValue(userId, out var categoryId) ? categoryId : null;
+        }   
+        public static void SetUserCurrentCategory(long userId, long? categoryId)
+        {
+            if (categoryId == null)
+            {
+                _userCurrentCategories.Remove(userId);
+            }
+            else
+            {
+                _userCurrentCategories[userId] = categoryId;
+            }
+        }   
+        public static void SetTempWord(long userId, string word)
+        {
+            _tempWordStorage[userId] = word;
+        }   
+        public static string GetTempWord(long userId)
+        {
+            return _tempWordStorage.TryGetValue(userId, out var word) ? word : string.Empty;
         }
     }
-} 
+}
