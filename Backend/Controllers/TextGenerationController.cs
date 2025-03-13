@@ -1,7 +1,7 @@
 using Backend.Integrations.Interfaces;
-using Backend.Models;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+
 
 namespace Backend.Controllers
 {
@@ -13,57 +13,73 @@ namespace Backend.Controllers
     [Route("api/[controller]")]
     public class TextGenerationController : ControllerBase
     {
-        private readonly ITextGenerator _textGenerator;
         private readonly IWordManager _wordManager;
-        private readonly IUserManager _userManager;
+        private readonly ITextGenerator _textGenerator;
+        private readonly ILogger<TextGenerationController> _logger;
 
         /// <summary>
-        /// Конструктор для внедрения зависимостей ITextGenerator, IWordManager и IUserManager.
+        /// Конструктор для внедрения зависимостей ITextGenerator и ILogger.
         /// </summary>
+        /// <param name="wordManager">Сервис для управления словами.</param>
         /// <param name="textGenerator">Сервис для генерации текста.</param>
-        /// <param name="wordManager">Менеджер слов.</param>
-        /// <param name="userManager">Менеджер пользователей.</param>
+        /// <param name="logger">Логгер для логирования ошибок.</param>
         public TextGenerationController(
-            ITextGenerator textGenerator,
             IWordManager wordManager,
-            IUserManager userManager)
+            ITextGenerator textGenerator,
+            ILogger<TextGenerationController> logger)
         {
-            _textGenerator = textGenerator;
             _wordManager = wordManager;
-            _userManager = userManager;
+            _textGenerator = textGenerator;
+            _logger = logger;
         }
 
         /// <summary>
-        /// Генерирует текст на основе слов из словаря пользователя.
+        /// Генерирует текст на основе изученных слов пользователя
         /// </summary>
-        /// <param name="userId">Идентификатор пользователя.</param>
-        /// <param name="category">Категория слов (опционально).</param>
-        /// <returns>Сгенерированный текст.</returns>
-        /// <response code="200">Текст успешно сгенерирован.</response>
-        /// <response code="404">Пользователь или слова не найдены.</response>
-        /// <response code="500">Ошибка при генерации текста.</response>
+        /// <param name="userId">ID пользователя</param>
+        /// <param name="categoryId">ID категории (опционально)</param>
+        /// <returns>Сгенерированный текст с переводом</returns>
         [HttpGet("generate")]
-        public async Task<IActionResult> GenerateText([FromQuery] long userId, [FromQuery] string? category = null)
+        public async Task<ActionResult<GeneratedTextResponse>> GenerateText(
+            [FromQuery] long userId,
+            [FromQuery] long? categoryId = null)
         {
             try
             {
-                var user = await _userManager.GetUserAsync(userId);
-                if (user == null)
-                    return NotFound($"Пользователь с ID {userId} не найден");
-
-                var words = await _wordManager.GetRandomWordsForGeneratingTextAsync(userId, category);
+                // Получаем изученные слова пользователя
+                var words = await _wordManager.GetLearnedWordsAsync(userId, categoryId);
                 if (!words.Any())
-                    return NotFound("Недостаточно слов для генерации текста");
+                {
+                    return BadRequest("No learned words found for text generation");
+                }
 
-                var wordsWithTranslations = words.ToDictionary(w => w.Text, w => w.Translation);
-                var text = await _textGenerator.GenerateTextWithTranslationsAsync(wordsWithTranslations);
+                // Создаем словарь слов с переводами
+                var wordsDict = words.ToDictionary(w => w.Text, w => w.Translation);
 
-                return Ok(text);
+                // Генерируем текст
+                var generatedText = await _textGenerator.GenerateTextWithTranslationsAsync(wordsDict);
+
+                var response = new GeneratedTextResponse
+                {
+                    EnglishText = generatedText.EnglishText,
+                    RussianText = generatedText.RussianText,
+                    Words = wordsDict
+                };
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                _logger.LogError(ex, "Error generating text for userId: {UserId}", userId);
+                return StatusCode(500, "Error generating text");
             }
+        }
+
+        public class GeneratedTextResponse
+        {
+            public string EnglishText { get; set; } = string.Empty;
+            public string RussianText { get; set; } = string.Empty;
+            public Dictionary<string, string> Words { get; set; } = new();
         }
     }
 }

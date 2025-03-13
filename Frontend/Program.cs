@@ -3,7 +3,6 @@ using DotNetEnv;
 
 try
 {
-    // Загружаем переменные окружения из .env файла
     Env.Load();
     
     Console.WriteLine("Запуск бота...");
@@ -11,7 +10,6 @@ try
 
     var cts = new CancellationTokenSource();
 
-    // Обработка сигнала завершения для корректного выхода
     Console.CancelKeyPress += (s, e) =>
     {
         e.Cancel = true;
@@ -19,7 +17,6 @@ try
         Console.WriteLine("\nЗавершение работы бота...");
     };
 
-    // Запускаем бота
     await BotManager.StartAsync();
 }
 catch (Exception ex)
