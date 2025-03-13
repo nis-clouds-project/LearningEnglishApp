@@ -193,7 +193,7 @@ namespace Backend.Integrations
                         _logger.LogInformation("Проверка SSL сертификата. Ошибки: {Errors}", errors);
                         return true; // Принимаем любой сертификат
                     },
-                    MaxTimeout = 30000 // 30 секунд таймаут для генерации текста
+                    Timeout = TimeSpan.FromSeconds(30)
                 };
 
                 using var client = new RestClient(options);

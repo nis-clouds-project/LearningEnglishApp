@@ -13,83 +13,64 @@ namespace Frontend.Services
 
         public ApiClient(string baseUrl)
         {
-            Console.WriteLine($"Инициализация ApiClient с базовым URL: {baseUrl}");
             _httpClient = new HttpClient
             {
                 BaseAddress = new Uri(baseUrl),
                 Timeout = TimeSpan.FromSeconds(30)
             };
             _httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
-            Console.WriteLine("HttpClient настроен с таймаутом 30 секунд");
+        }
+
+        /// <summary>
+        /// Получает список категорий слов.
+        /// </summary>
+        /// <returns>Список категорий слов или null в случае ошибки.</returns>
+        public async Task<List<Category>?> GetCategoriesAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/Word/categories");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var categories = await response.Content.ReadFromJsonAsync<List<Category>>();
+                    return categories;
+                }
+                
+                var error = await response.Content.ReadAsStringAsync();
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
         }
 
         /// <summary>
         /// Получает список изученных слов пользователя.
         /// </summary>
         /// <param name="userId">Идентификатор пользователя.</param>
-        /// <param name="category">Категория слов (опционально).</param>
-        /// <returns>Список изученных слов, сгруппированных по категориям.</returns>
-        public async Task<List<VocabularyCategory>?> GetLearnedWordsAsync(long userId, string? category = null)
+        /// <param name="categoryId">Идентификатор категории (опционально).</param>
+        /// <returns>Список изученных слов или null в случае ошибки.</returns>
+        public async Task<List<Word>?> GetLearnedWordsAsync(long userId)
         {
             try
             {
-                var url = $"/api/Word/learned?userId={userId}";
-                if (!string.IsNullOrEmpty(category))
-                {
-                    url += $"&category={category}";
-                }
-
-                var fullUrl = new Uri(_httpClient.BaseAddress!, url).ToString();
-                Console.WriteLine($"[GetLearnedWordsAsync] Отправка GET запроса: {fullUrl}");
-
-                using var response = await _httpClient.GetAsync(url);
-                Console.WriteLine($"[GetLearnedWordsAsync] Получен ответ: {(int)response.StatusCode} {response.StatusCode}");
-                var responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[GetLearnedWordsAsync] Содержимое ответа: {responseContent}");
-
+                var response = await _httpClient.GetAsync($"api/Word/learned?userId={userId}");
+                
                 if (response.IsSuccessStatusCode)
                 {
-                    try 
-                    {
-                        var vocabulary = await response.Content.ReadFromJsonAsync<List<VocabularyCategory>>();
-                        Console.WriteLine($"[GetLearnedWordsAsync] Получен словарь с {vocabulary?.Count ?? 0} категориями");
-                        if (vocabulary != null)
-                        {
-                            foreach (var vocabularyCategory in vocabulary)
-                            {
-                                Console.WriteLine($"[GetLearnedWordsAsync] Категория '{vocabularyCategory.Category}' содержит {vocabularyCategory.Words?.Count ?? 0} слов");
-                            }
-                        }
-                        return vocabulary;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[GetLearnedWordsAsync] Ошибка при десериализации JSON: {ex.Message}");
-                        Console.WriteLine($"[GetLearnedWordsAsync] Полученный JSON: {responseContent}");
-                        return null;
-                    }
+                    var words = await response.Content.ReadFromJsonAsync<List<Word>>();
+                    return words;
                 }
-
-                Console.WriteLine($"[GetLearnedWordsAsync] Ошибка при получении словаря: {responseContent}");
+                
+                var error = await response.Content.ReadAsStringAsync();
                 return null;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GetLearnedWordsAsync] Исключение при получении словаря:");
-                Console.WriteLine($"[GetLearnedWordsAsync] {ex.Message}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"[GetLearnedWordsAsync] Inner exception: {ex.InnerException.Message}");
-                }
                 return null;
             }
-        }
-
-        public class GeneratedTextResponse
-        {
-            public string EnglishText { get; set; } = string.Empty;
-            public string RussianText { get; set; } = string.Empty;
-            public Dictionary<string, string> Words { get; set; } = new();
         }
 
         /// <summary>
@@ -101,47 +82,19 @@ namespace Frontend.Services
         {
             try
             {
-                var url = $"/api/Word/generate-text?userId={userId}";
-                Console.WriteLine($"[GenerateTextFromVocabularyAsync] Отправка GET запроса: {url}");
+                var response = await _httpClient.GetAsync($"api/TextGeneration/generate?userId={userId}");
                 
-                var response = await _httpClient.GetAsync(url);
-                Console.WriteLine($"[GenerateTextFromVocabularyAsync] Получен ответ: {(int)response.StatusCode} {response.StatusCode}");
-                
-                var responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[GenerateTextFromVocabularyAsync] Содержимое ответа: {responseContent}");
-                
-                if (!response.IsSuccessStatusCode)
-                {
-                    Console.WriteLine($"[GenerateTextFromVocabularyAsync] Ошибка при генерации текста. Статус: {response.StatusCode}");
-                    return null;
-                }
-
-                try
+                if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<GeneratedTextResponse>();
-                    if (result != null)
-                    {
-                        Console.WriteLine($"[GenerateTextFromVocabularyAsync] Успешно получен текст:");
-                        Console.WriteLine($"[GenerateTextFromVocabularyAsync] Английский текст: {result.EnglishText}");
-                        Console.WriteLine($"[GenerateTextFromVocabularyAsync] Русский текст: {result.RussianText}");
-                        Console.WriteLine($"[GenerateTextFromVocabularyAsync] Количество слов: {result.Words.Count}");
-                    }
                     return result;
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[GenerateTextFromVocabularyAsync] Ошибка при десериализации ответа: {ex.Message}");
-                    Console.WriteLine($"[GenerateTextFromVocabularyAsync] Содержимое ответа: {responseContent}");
-                    return null;
-                }
+                
+                var error = await response.Content.ReadAsStringAsync();
+                return null;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GenerateTextFromVocabularyAsync] Ошибка при генерации текста для пользователя {userId}: {ex.Message}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"[GenerateTextFromVocabularyAsync] Inner exception: {ex.InnerException.Message}");
-                }
                 return null;
             }
         }
@@ -155,32 +108,12 @@ namespace Frontend.Services
         {
             try
             {
-                var url = $"/api/User/exists?userId={userId}";
-                var fullUrl = new Uri(_httpClient.BaseAddress!, url).ToString();
-                Console.WriteLine($"Отправка GET запроса: {fullUrl}");
-                
-                using var response = await _httpClient.GetAsync(url);
-                Console.WriteLine($"Получен ответ: {(int)response.StatusCode} {response.StatusCode}");
-                Console.WriteLine($"Заголовки ответа: {string.Join(", ", response.Headers.Select(h => $"{h.Key}={string.Join(";", h.Value)}"))}");
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    var result = await response.Content.ReadFromJsonAsync<bool>();
-                    Console.WriteLine($"Результат проверки существования пользователя: {result}");
-                    return result;
-                }
-                
-                var error = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Ошибка при проверке существования пользователя: {error}");
-                return false;
+                var response = await _httpClient.GetAsync($"api/User/exists?userId={userId}");
+                var result = response.IsSuccessStatusCode;
+                return result;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Исключение при проверке существования пользователя: {ex}");
-                if (ex is HttpRequestException httpEx)
-                {
-                    Console.WriteLine($"HttpRequestException StatusCode: {httpEx.StatusCode}");
-                }
                 return false;
             }
         }
@@ -194,30 +127,57 @@ namespace Frontend.Services
         {
             try
             {
-                var url = "/api/User/add";
-                var fullUrl = new Uri(_httpClient.BaseAddress!, url).ToString();
-                Console.WriteLine($"Отправка POST запроса: {fullUrl}");
-                
-                using var response = await _httpClient.PostAsJsonAsync(url, userId);
-                Console.WriteLine($"Получен ответ: {(int)response.StatusCode} {response.StatusCode}");
-                Console.WriteLine($"Заголовки ответа: {string.Join(", ", response.Headers.Select(h => $"{h.Key}={string.Join(";", h.Value)}"))}");
-                
-                if (!response.IsSuccessStatusCode)
+                var existsResponse = await _httpClient.GetAsync($"api/user/{userId}");
+                if (existsResponse.IsSuccessStatusCode)
                 {
-                    var error = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Ошибка при добавлении пользователя: {error}");
+                    return true;
+                }
+
+                var endpoint = "api/user/add";
+                
+                var content = new StringContent(userId.ToString(), System.Text.Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync(endpoint, content);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    return true;
                 }
                 
-                return response.IsSuccessStatusCode;
+                if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    return true;
+                }
+                
+                return false;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Исключение при добавлении пользователя: {ex}");
-                if (ex is HttpRequestException httpEx)
-                {
-                    Console.WriteLine($"HttpRequestException StatusCode: {httpEx.StatusCode}");
-                }
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Получает список слов в категории.
+        /// </summary>
+        /// <param name="categoryId">Идентификатор категории</param>
+        /// <returns>Список слов в категории или null в случае ошибки</returns>
+        public async Task<List<Word>?> GetWordsByCategoryAsync(long categoryId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/Word/category/{categoryId}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var words = await response.Content.ReadFromJsonAsync<List<Word>>();
+                    return words;
+                }
+                
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
             }
         }
 
@@ -225,38 +185,58 @@ namespace Frontend.Services
         /// Получает случайное слово для изучения.
         /// </summary>
         /// <param name="userId">Идентификатор пользователя.</param>
-        /// <param name="category">Категория слова.</param>
+        /// <param name="categoryId">Идентификатор категории (опционально).</param>
         /// <returns>Случайное слово или null в случае ошибки.</returns>
-        public async Task<Word?> GetRandomWordAsync(long userId, string category)
+        public async Task<Word?> GetRandomWordAsync(long userId, long? categoryId)
         {
             try
             {
-                var url = $"/api/Word/random?userId={userId}&category={category}";
-                var fullUrl = new Uri(_httpClient.BaseAddress!, url).ToString();
-                Console.WriteLine($"Отправка GET запроса: {fullUrl}");
-                
-                using var response = await _httpClient.GetAsync(url);
-                Console.WriteLine($"Получен ответ: {(int)response.StatusCode} {response.StatusCode}");
-                Console.WriteLine($"Заголовки ответа: {string.Join(", ", response.Headers.Select(h => $"{h.Key}={string.Join(";", h.Value)}"))}");
-                
-                if (response.IsSuccessStatusCode)
+                if (categoryId.HasValue)
                 {
-                    var word = await response.Content.ReadFromJsonAsync<Word>();
-                    Console.WriteLine($"Получено слово: {word?.ToString()}");
-                    return word;
+                    var categories = await GetCategoriesAsync();
+                    if (categories?.Any(c => c.Id == categoryId) != true)
+                    {
+                        return null;
+                    }
+
+                    var categoryWords = await GetWordsByCategoryAsync(categoryId.Value);
+                    if (categoryWords == null || !categoryWords.Any())
+                    {
+                        return null;
+                    }
+
+                    var learnedWords = await GetLearnedWordsAsync(userId);
+                    var learnedWordIds = learnedWords?.Select(w => w.Id).ToHashSet() ?? new HashSet<long>();
+
+                    var availableWords = categoryWords.Where(w => !learnedWordIds.Contains(w.Id)).ToList();
+                    if (!availableWords.Any())
+                    {
+                        return null;
+                    }
+
+                }
+
+                var url = categoryId.HasValue 
+                    ? $"api/Word/random?userId={userId}&categoryId={categoryId}"
+                    : $"api/Word/random?userId={userId}";
+                
+                var response = await _httpClient.GetAsync(url);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
                 }
                 
-                var error = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Ошибка при получении случайного слова: {error}");
-                return null;
+                var word = await response.Content.ReadFromJsonAsync<Word>();
+                if (word == null)
+                {
+                    return null;
+                }
+                
+                return word;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Исключение при получении случайного слова: {ex}");
-                if (ex is HttpRequestException httpEx)
-                {
-                    Console.WriteLine($"HttpRequestException StatusCode: {httpEx.StatusCode}");
-                }
                 return null;
             }
         }
@@ -271,78 +251,108 @@ namespace Frontend.Services
         {
             try
             {
-                // Сначала проверяем существование пользователя
-                var userExists = await UserExistsAsync(userId);
-                if (!userExists)
-                {
-                    Console.WriteLine($"[AddWordToVocabularyAsync] Пользователь {userId} не существует, пробуем создать");
-                    var userAdded = await AddUserAsync(userId);
-                    if (!userAdded)
-                    {
-                        Console.WriteLine($"[AddWordToVocabularyAsync] Не удалось создать пользователя {userId}");
-                        return false;
-                    }
-                    Console.WriteLine($"[AddWordToVocabularyAsync] Пользователь {userId} успешно создан");
-                }
-
-                // Отправляем параметры в URL
-                var url = $"/api/Word/vocabulary/add?userId={userId}&wordId={wordId}";
-                var fullUrl = new Uri(_httpClient.BaseAddress!, url).ToString();
-                Console.WriteLine($"[AddWordToVocabularyAsync] Отправка POST запроса: {fullUrl}");
+                var response = await _httpClient.PostAsync($"api/Word/vocabulary/add?userId={userId}&wordId={wordId}", null);
                 
-                // Отправляем пустое тело запроса
-                using var response = await _httpClient.PostAsync(url, null);
-                Console.WriteLine($"[AddWordToVocabularyAsync] Получен ответ: {(int)response.StatusCode} {response.StatusCode}");
-                
-                var responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[AddWordToVocabularyAsync] Содержимое ответа: {responseContent}");
-
-                if (!response.IsSuccessStatusCode)
+                if (response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine($"[AddWordToVocabularyAsync] Ошибка при добавлении слова в словарь: {responseContent}");
-                    return false;
+                    return true;
                 }
                 
-                Console.WriteLine($"[AddWordToVocabularyAsync] Слово успешно добавлено в словарь");
-                return true;
+                return false;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AddWordToVocabularyAsync] Исключение при добавлении слова в словарь:");
-                Console.WriteLine($"[AddWordToVocabularyAsync] {ex.Message}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"[AddWordToVocabularyAsync] Inner exception: {ex.InnerException.Message}");
-                }
                 return false;
             }
         }
 
+        /// <summary>
+        /// Получает слово по его идентификатору.
+        /// </summary>
         public async Task<Word?> GetWordByIdAsync(int wordId)
         {
             try
             {
-                var url = $"/api/Word/{wordId}";
-                var fullUrl = new Uri(_httpClient.BaseAddress!, url).ToString();
-                Console.WriteLine($"Отправка GET запроса для получения слова: {fullUrl}");
-
-                using var response = await _httpClient.GetAsync(url);
-                Console.WriteLine($"Получен ответ: {(int)response.StatusCode} {response.StatusCode}");
-
+                var response = await _httpClient.GetAsync($"api/word/{wordId}");
+                
                 if (response.IsSuccessStatusCode)
                 {
                     var word = await response.Content.ReadFromJsonAsync<Word>();
-                    Console.WriteLine($"Получено слово: {word?.ToString()}");
                     return word;
                 }
-
-                var error = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Ошибка при получении слова: {error}");
+                
                 return null;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Исключение при получении слова: {ex}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Сохраняет текущую категорию обучения пользователя.
+        /// </summary>
+        /// <param name="userId">Идентификатор пользователя</param>
+        /// <param name="categoryId">Идентификатор категории</param>
+        public async Task<bool> SaveUserLearningCategoryAsync(long userId, long categoryId)
+        {
+            try
+            {
+                var userResponse = await _httpClient.GetAsync($"api/User/{userId}");
+                if (!userResponse.IsSuccessStatusCode)
+                {
+                    return false;
+                }
+
+                var user = await userResponse.Content.ReadFromJsonAsync<User>();
+                if (user == null)
+                {
+                    return false;
+                }
+
+                user.current_learning_category = categoryId;
+
+                var content = JsonContent.Create(user);
+                var response = await _httpClient.PutAsync($"api/User/{userId}", content);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+                
+                return false;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Получает текущую категорию обучения пользователя.
+        /// </summary>
+        /// <param name="userId">Идентификатор пользователя</param>
+        /// <returns>ID категории или null, если категория не установлена</returns>
+        public async Task<long?> GetUserLearningCategoryAsync(long userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/User/{userId}");
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var user = await response.Content.ReadFromJsonAsync<User>();
+                if (user?.current_learning_category == null)
+                {
+                    return null;
+                }
+
+                return user.current_learning_category;
+            }
+            catch (Exception ex)
+            {
                 return null;
             }
         }
@@ -355,15 +365,14 @@ namespace Frontend.Services
 
         protected virtual void Dispose(bool disposing)
         {
-            if (_disposed)
-                return;
-
-            if (disposing)
+            if (!_disposed)
             {
-                _httpClient.Dispose();
+                if (disposing)
+                {
+                    _httpClient.Dispose();
+                }
+                _disposed = true;
             }
-
-            _disposed = true;
         }
     }
 } 

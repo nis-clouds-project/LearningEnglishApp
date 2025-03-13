@@ -1,14 +1,13 @@
 namespace Backend.Integrations.Interfaces;
 
 /// <summary>
-/// Интерфейс для сервиса управления токенами доступа.
+/// Интерфейс для сервиса управления токенами.
 /// </summary>
 public interface ITokenService
 {
     /// <summary>
-    /// Получает действующий токен доступа.
-    /// Если текущий токен истек, автоматически запрашивает новый.
+    /// Получает токен доступа для API.
     /// </summary>
-    /// <returns>Токен доступа.</returns>
+    /// <returns>Строка с токеном доступа.</returns>
     string GetAccessToken();
 }

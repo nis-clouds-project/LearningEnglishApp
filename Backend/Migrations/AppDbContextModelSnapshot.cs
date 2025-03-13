@@ -17,64 +17,200 @@ namespace Backend.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.2")
+                .HasAnnotation("ProductVersion", "8.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Backend.Models.User", b =>
+            modelBuilder.Entity("Backend.Models.Category", b =>
                 {
                     b.Property<long>("Id")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
 
-                    b.Property<string>("LearnedWordIds")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<string>("UserAiUsage")
+                    b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<string>("ViewedWordsWordIds")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.HasIndex("Name")
+                        .HasDatabaseName("ix_categories_name");
+
+                    b.ToTable("categories", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Models.User", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<string>("UserAiUsage")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("user_ai_usage");
+
+                    b.Property<string>("learned_words")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("learned_words");
+
+                    b.Property<string>("my_words")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("my_words");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("users", (string)null);
                 });
 
             modelBuilder.Entity("Backend.Models.Word", b =>
                 {
-                    b.Property<int>("Id")
-                        .HasColumnType("integer");
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<DateTime>("LastShown")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsCustom")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_custom");
 
                     b.Property<string>("Text")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("text");
 
                     b.Property<string>("Translation")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("translation");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long?>("category_id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("category_id");
+
+                    b.Property<long>("user_id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Category");
+                    b.HasIndex("Text")
+                        .HasDatabaseName("ix_words_text");
 
-                    b.HasIndex("Text");
+                    b.HasIndex("category_id")
+                        .HasDatabaseName("ix_words_category_id");
 
-                    b.HasIndex("Translation");
+                    b.HasIndex("user_id")
+                        .HasDatabaseName("ix_words_user_id");
 
-                    b.ToTable("Words");
+                    b.ToTable("words", (string)null);
+                });
+
+            modelBuilder.Entity("UserWord", b =>
+                {
+                    b.Property<long>("LearnedByUsersId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.Property<long>("LearnedWordsId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("word_id");
+
+                    b.HasKey("LearnedByUsersId", "LearnedWordsId");
+
+                    b.HasIndex("LearnedWordsId");
+
+                    b.ToTable("user_learned_words", (string)null);
+                });
+
+            modelBuilder.Entity("UserWord1", b =>
+                {
+                    b.Property<long>("ViewedByUsersId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.Property<long>("ViewedWordsId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("word_id");
+
+                    b.HasKey("ViewedByUsersId", "ViewedWordsId");
+
+                    b.HasIndex("ViewedWordsId");
+
+                    b.ToTable("user_viewed_words", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Models.Word", b =>
+                {
+                    b.HasOne("Backend.Models.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("category_id")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Backend.Models.User", null)
+                        .WithMany("CustomWords")
+                        .HasForeignKey("user_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("UserWord", b =>
+                {
+                    b.HasOne("Backend.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("LearnedByUsersId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Word", null)
+                        .WithMany()
+                        .HasForeignKey("LearnedWordsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("UserWord1", b =>
+                {
+                    b.HasOne("Backend.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("ViewedByUsersId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Word", null)
+                        .WithMany()
+                        .HasForeignKey("ViewedWordsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Backend.Models.User", b =>
+                {
+                    b.Navigation("CustomWords");
                 });
 #pragma warning restore 612, 618
         }

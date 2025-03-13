@@ -1,26 +1,13 @@
 namespace Frontend.Models
 {
     /// <summary>
-    /// Класс, представляющий пользователя.
-    /// Содержит информацию о пользователе, включая идентификатор, списки изученных и просмотренных слов.
+    /// Модель пользователя для внутреннего использования
     /// </summary>
-    public class User(long id)
+    public class User
     {
-        /// <summary>
-        /// Уникальный идентификатор пользователя.
-        /// </summary>
-        public long Id { get; } = id;
-
-        /// <summary>
-        /// Список идентификаторов слов, которые пользователь выучил.
-        /// </summary>
-        public List<int> LearnedWordIds { get; } = [];
-
-        /// <summary>
-        /// Список идентификаторов слов, которые пользователь просмотрел.
-        /// </summary>
-        public List<int> ViewedWordsWordIds { get; } = [];
-    
-        public UserAiUsage UserAiUsage { get; set; } = new UserAiUsage();
+        public long Id { get; set; }
+        public List<long>? learned_words { get; set; }
+        public List<long>? my_words { get; set; }
+        public long? current_learning_category { get; set; }
     }
 }
