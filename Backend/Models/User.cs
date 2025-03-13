@@ -1,49 +1,57 @@
-using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations;
 
 namespace Backend.Models;
 
 /// <summary>
-/// Класс, представляющий пользователя.
-/// Содержит информацию о пользователе, включая идентификатор, списки изученных и просмотренных слов.
+/// Модель пользователя, хранящая только идентификаторы изученных и собственных слов
 /// </summary>
 public class User
 {
     /// <summary>
-    /// Создает нового пользователя с указанным идентификатором.
+    /// Уникальный идентификатор пользователя (Telegram ID)
     /// </summary>
-    /// <param name="id">Уникальный идентификатор пользователя.</param>
-    public User(long id)
-    {
-        Id = id;
-        LearnedWordIds = new List<int>();
-        ViewedWordsWordIds = new List<int>();
-        UserAiUsage = new Dictionary<DateTime, int>();
-    }
-
-    /// <summary>
-    /// Конструктор без параметров для Entity Framework
-    /// </summary>
-    public User()
-    {
-        LearnedWordIds = new List<int>();
-        ViewedWordsWordIds = new List<int>();
-        UserAiUsage = new Dictionary<DateTime, int>();
-    }
-
-    /// <summary>
-    /// Уникальный идентификатор пользователя.
-    /// </summary>
+    [Key]
     public long Id { get; set; }
 
     /// <summary>
-    /// Список идентификаторов слов, которые пользователь выучил.
+    /// Список идентификаторов изученных слов, хранится в формате JSON
     /// </summary>
-    public List<int> LearnedWordIds { get; set; } = new();
+    public List<long> learned_words { get; set; } = new();
 
     /// <summary>
-    /// Список идентификаторов слов, которые пользователь просмотрел.
+    /// Список идентификаторов пользовательских слов, хранится в формате JSON
     /// </summary>
-    public List<int> ViewedWordsWordIds { get; set; } = new();
-    
-    public Dictionary<DateTime, int> UserAiUsage { get; set; } = new();
+    public List<long> my_words { get; set; } = new();
+
+    public Dictionary<DateTime, int> UserAiUsage { get; set; }
+
+    // Навигационные свойства для отношений с Word
+    public virtual ICollection<Word> LearnedWords { get; set; }
+    public virtual ICollection<Word> ViewedWords { get; set; }
+    public virtual ICollection<Word> CustomWords { get; set; }
+
+    public User(long id)
+    {
+        Id = id;
+        learned_words = new List<long>();
+        my_words = new List<long>();
+        UserAiUsage = new Dictionary<DateTime, int>();
+        
+        // Инициализация навигационных свойств
+        LearnedWords = new List<Word>();
+        ViewedWords = new List<Word>();
+        CustomWords = new List<Word>();
+    }
+
+    public User()
+    {
+        learned_words = new List<long>();
+        my_words = new List<long>();
+        UserAiUsage = new Dictionary<DateTime, int>();
+        
+        // Инициализация навигационных свойств
+        LearnedWords = new List<Word>();
+        ViewedWords = new List<Word>();
+        CustomWords = new List<Word>();
+    }
 }
