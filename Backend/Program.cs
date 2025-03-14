@@ -26,11 +26,18 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+
 // Register services
 builder.Services.AddScoped<IUserManager, DbUserManager>();
 builder.Services.AddScoped<IWordManager, DbWordManager>();
 builder.Services.AddScoped<ITextGenerator, GigaChatTextGenerator>();
 builder.Services.AddScoped<Backend.Integrations.Interfaces.ITokenService, Backend.Integrations.TokenService>();
+
+// Register translator service
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IYandexTokenService, YandexTokenService>();
+builder.Services.AddScoped<ITranslatorService, TranslatorService>();
+builder.Services.AddHostedService<YandexTokenBackgroundService>();
 
 var app = builder.Build();
 

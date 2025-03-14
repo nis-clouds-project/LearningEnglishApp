@@ -30,6 +30,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8000
       - ConnectionStrings__DefaultConnection=Server=postgres;Port=5432;Database=learning_english;User Id=admin;Password=admin_password;
+      - Yandex__OAuthToken=${YANDEX_OAUTH_TOKEN}
+      - Yandex__FolderId=${YANDEX_FOLDER_ID}
     ports:
       - "8000:8000"
     networks:
