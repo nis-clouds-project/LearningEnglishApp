@@ -35,7 +35,7 @@ builder.Services.AddScoped<Backend.Integrations.Interfaces.ITokenService, Backen
 
 // Register translator service
 builder.Services.AddHttpClient();
-builder.Services.AddScoped<IYandexTokenService, YandexTokenService>();
+builder.Services.AddSingleton<IYandexTokenService, YandexTokenService>();
 builder.Services.AddScoped<ITranslatorService, TranslatorService>();
 builder.Services.AddHostedService<YandexTokenBackgroundService>();
 

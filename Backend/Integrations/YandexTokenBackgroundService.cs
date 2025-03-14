@@ -17,13 +17,18 @@ namespace Backend.Integrations
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                await _tokenService.StartTokenRefreshAsync(stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in token refresh background service");
+                try
+                {
+                    await _tokenService.RefreshTokenAsync();
+                    await Task.Delay(TimeSpan.FromHours(1), stoppingToken); 
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error refreshing token");
+                    await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                }
             }
         }
     }
