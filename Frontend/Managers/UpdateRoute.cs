@@ -61,6 +61,9 @@ public static class UpdateRoute
                 case "/addword":
                     await VocabularyManager.StartAddWord(chatId, cancellationToken);
                     break;
+                case "/mywords":
+                    await VocabularyManager.HandleShowMyWords(chatId, cancellationToken);
+                    break;
                 default:
                     await BotManager.Bot!.SendTextMessageAsync(
                         chatId: chatId,

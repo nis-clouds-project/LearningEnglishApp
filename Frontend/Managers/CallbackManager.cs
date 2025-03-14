@@ -95,13 +95,13 @@ public static class CallbackManager
                     await LearningManager.HandleGenerateCommand(chatId.Value, cancellationToken);
                     break;
                 case "show_my_words":
-                    await HandleShowMyWords(chatId.Value, cancellationToken);
+                    await VocabularyManager.HandleShowMyWords(chatId.Value, cancellationToken);
                     break;
                 case var s when s.StartsWith("delete_myword_"):
                     var wordIdString = s["delete_myword_".Length..];
                     if (long.TryParse(wordIdString, out var wordCustomId))
                     {
-                        await HandleDeleteMyWord(chatId.Value, wordCustomId, cancellationToken);
+                        await VocabularyManager.HandleDeleteMyWord(chatId.Value, wordCustomId, cancellationToken);
                     }
                     break;
                 default:

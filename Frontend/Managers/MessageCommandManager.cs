@@ -57,6 +57,9 @@ public static class MessageCommandManager
                               "👋 /start - Начать работу с ботом\n" +
                               "📚 /learn - Начать изучение слов\n" +
                               "📝 /addword - Добавить своё слово\n" +
+                              "📖 /vocabulary - Посмотреть изученные слова\n" +
+                              "📝 /mywords - Посмотреть все слова из категории \"My Words\"\n" + // Новая команда
+                              "✍️ /generate - Сгенерировать текст из изученных слов\n" +
                               "❓ /help - Показать эту справку\n\n" +
                               "Как учить слова:\n" +
                               "1. Выберите категорию через команду /learn\n" +
@@ -92,6 +95,7 @@ public static class MessageCommandManager
                               "📚 /learn - Начать изучение слов\n" +
                               "📝 /addword - Добавить своё слово\n" +
                               "📖 /vocabulary - Посмотреть изученные слова\n" +
+                              "📝 /mywords - Посмотреть все слова из категории \"My Words\"\n" +
                               "✍️ /generate - Сгенерировать текст из изученных слов\n" +
                               "❓ /help - Подробная справка\n\n" +
                               "Выберите действие:";
@@ -105,7 +109,11 @@ public static class MessageCommandManager
             },
             new[]
             {
-                InlineKeyboardButton.WithCallbackData(text: "📖 Мой словарь", callbackData: "show_vocabulary"),
+                InlineKeyboardButton.WithCallbackData(text: "📖 Изученные слова", callbackData: "show_vocabulary"),
+                InlineKeyboardButton.WithCallbackData(text: "📝 Мои слова", callbackData: "show_my_words")
+            },
+            new[]
+            {
                 InlineKeyboardButton.WithCallbackData(text: "✍️ Генерировать текст", callbackData: "generate_text")
             }
         });

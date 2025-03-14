@@ -189,31 +189,31 @@ public static class VocabularyManager
         }
     }
     
-    private static async Task HandleDeleteMyWord(long chatId, long wordId, CancellationToken cancellationToken)
+    public static async Task HandleDeleteMyWord(long chatId, long wordId, CancellationToken cancellationToken)
     {
         try
         {
-            if (_apiClient == null)
+            if (BotManager.ApiClient == null)
             {
-                await _bot!.SendTextMessageAsync(
+                await BotManager.Bot!.SendTextMessageAsync(
                     chatId: chatId,
                     text: "Произошла внутренняя ошибка. Пожалуйста, попробуйте позже.",
                     cancellationToken: cancellationToken);
                 return;
             }
  
-            var success = await _apiClient.DeleteCustomWord(chatId, wordId);
+            var success = await BotManager.ApiClient.DeleteCustomWord(chatId, wordId);
  
             if (success)
             {
-                await _bot!.SendTextMessageAsync(
+                await BotManager.Bot!.SendTextMessageAsync(
                     chatId: chatId,
                     text: "✅ Слово успешно удалено.",
                     cancellationToken: cancellationToken);
             }
             else
             {
-                await _bot!.SendTextMessageAsync(
+                await BotManager.Bot!.SendTextMessageAsync(
                     chatId: chatId,
                     text: "❌ Не удалось удалить слово. Пожалуйста, попробуйте позже.",
                     cancellationToken: cancellationToken);
@@ -223,11 +223,105 @@ public static class VocabularyManager
         }
         catch (Exception ex)
         {
-            await _bot!.SendTextMessageAsync(
+            await BotManager.Bot!.SendTextMessageAsync(
                 chatId: chatId,
                 text: "Произошла ошибка при удалении слова. Пожалуйста, попробуйте позже.",
                 cancellationToken: cancellationToken);
         }
     }
+    
+    public static async Task HandleShowMyWords(long chatId, CancellationToken cancellationToken)
+     {
+         try
+         {
+             if (BotManager.ApiClient == null)
+             {
+                 await BotManager.Bot!.SendTextMessageAsync(
+                     chatId: chatId,
+                     text: "Произошла внутренняя ошибка. Пожалуйста, попробуйте позже.",
+                     cancellationToken: cancellationToken);
+                 return;
+             }
 
+             var categories = await BotManager.ApiClient.GetCategoriesAsync();
+             var myWordsCategory = categories?.FirstOrDefault(c => c.Name?.Equals("My Words", StringComparison.OrdinalIgnoreCase) == true);
+             Console.WriteLine(myWordsCategory);
+             
+             if (myWordsCategory == null)
+             {
+                 await BotManager.Bot!.SendTextMessageAsync(
+                     chatId: chatId,
+                     text: "Категория \"My Words\" не найдена.",
+                     cancellationToken: cancellationToken);
+                 return;
+             }
+
+             var vocabulary = await BotManager.ApiClient.GetAllCustomWordsAsync(chatId);
+             Console.WriteLine(vocabulary.Count);
+             
+             if (vocabulary == null || !vocabulary.Any())
+             {
+                 Console.WriteLine("Тут");
+                 await BotManager.Bot!.SendTextMessageAsync(
+                     chatId: chatId,
+                     text: "У вас пока нет слов в категории \"My Words\".",
+                     cancellationToken: cancellationToken);
+                 return;
+             }
+
+             var myWords = vocabulary
+                 .Where(word => word.CategoryId == myWordsCategory.Id)
+                 .ToList();
+             
+             Console.WriteLine(myWords.Count);
+             if (!myWords.Any())
+             {
+                 await BotManager.Bot!.SendTextMessageAsync(
+                     chatId: chatId,
+                     text: "У вас пока нет слов в категории \"My Words\".",
+                     cancellationToken: cancellationToken);
+                 return;
+             }
+
+             var message = new StringBuilder("📝 *Ваши слова в категории \"My Words\":*\n\n");
+
+             foreach (var word in myWords)
+             {
+                 message.AppendLine($"• {word.Text} - {word.Translation}");
+             }
+
+             var buttons = new List<InlineKeyboardButton[]>();
+             foreach (var word in myWords)
+             {
+                 buttons.Add(new[]
+                 {
+                     InlineKeyboardButton.WithCallbackData(
+                         text: $"❌ Удалить \"{word.Text}\"",
+                         callbackData: $"delete_myword_{word.Id}")
+                 });
+             }
+
+             buttons.Add(new[]
+             {
+                 InlineKeyboardButton.WithCallbackData(text: "📚 Учить слова", callbackData: "learn_menu"),
+                 InlineKeyboardButton.WithCallbackData(text: "🔙 В меню", callbackData: "return_menu")
+             });
+
+             var keyboard = new InlineKeyboardMarkup(buttons);
+
+             await BotManager.Bot!.SendTextMessageAsync(
+                 chatId: chatId,
+                 text: message.ToString(),
+                 parseMode: ParseMode.Markdown,
+                 replyMarkup: keyboard,
+                 cancellationToken: cancellationToken);
+         }
+         catch (Exception ex)
+         {
+             await BotManager.Bot!.SendTextMessageAsync(
+                 chatId: chatId,
+                 text: "Произошла ошибка при получении слов. Пожалуйста, попробуйте позже.",
+                 cancellationToken: cancellationToken);
+         }
+     }
 }
