@@ -1,22 +1,18 @@
-using Backend.Exceptions;
 using Backend.Models;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace Backend.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")] // Базовый маршрут для контроллера: /api/user
+    [Route("api/[controller]")]
     public class UserController : ControllerBase
     {
         private readonly IUserManager _userManager;
-        private readonly ILogger<UserController> _logger;
 
-        public UserController(IUserManager userManager, ILogger<UserController> logger)
+        public UserController(IUserManager userManager)
         {
             _userManager = userManager;
-            _logger = logger;
         }
 
         /// <summary>
@@ -34,7 +30,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking user existence for userId: {UserId}", userId);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -60,7 +55,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating user for userId: {UserId}", userId);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -84,7 +78,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting user for userId: {UserId}", userId);
                 return StatusCode(500, "Internal server error");
             }
         }

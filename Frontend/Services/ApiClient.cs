@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using Frontend.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Frontend.Services
 {
@@ -10,7 +9,6 @@ namespace Frontend.Services
     public class ApiClient : IDisposable
     {
         private readonly HttpClient _httpClient;
-        private readonly ILogger<ApiClient> _logger;
         private bool _disposed;
 
         public ApiClient(string baseUrl)
@@ -21,7 +19,6 @@ namespace Frontend.Services
                 Timeout = TimeSpan.FromSeconds(30)
             };
             _httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
-            _logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<ApiClient>();
         }
 
         /// <summary>
@@ -32,7 +29,6 @@ namespace Frontend.Services
         {
             try
             {
-                _logger.LogInformation("Getting categories");
                 var response = await _httpClient.GetAsync("api/Word/categories");
                 
                 if (response.IsSuccessStatusCode)
@@ -41,14 +37,10 @@ namespace Frontend.Services
                     return categories;
                 }
                 
-                var error = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to get categories. Status: {Status}, Error: {Error}", 
-                    response.StatusCode, error);
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting categories");
                 return null;
             }
         }
@@ -67,7 +59,6 @@ namespace Frontend.Services
                     ? $"api/Word/learned?userId={userId}&categoryId={categoryId}"
                     : $"api/Word/learned?userId={userId}";
                 
-                _logger.LogInformation("Getting learned words for user {UserId}", userId);
                 var response = await _httpClient.GetAsync(url);
                 
                 if (response.IsSuccessStatusCode)
@@ -76,14 +67,10 @@ namespace Frontend.Services
                     return words;
                 }
                 
-                var error = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to get learned words. Status: {Status}, Error: {Error}", 
-                    response.StatusCode, error);
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting learned words for user {UserId}", userId);
                 return null;
             }
         }
@@ -122,7 +109,6 @@ namespace Frontend.Services
         {
             try
             {
-                _logger.LogInformation("Checking if user exists: {UserId}", userId);
                 var response = await _httpClient.GetAsync($"api/User/exists?userId={userId}");
                 
                 if (response.IsSuccessStatusCode)
@@ -135,7 +121,6 @@ namespace Frontend.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking user existence {UserId}", userId);
                 return false;
             }
         }
@@ -149,24 +134,19 @@ namespace Frontend.Services
         {
             try
             {
-                _logger.LogInformation("Adding new user: {UserId}", userId);
                 var response = await _httpClient.PostAsJsonAsync("api/User/add", userId);
                 
                 if (response.IsSuccessStatusCode)
                 {
                     var user = await response.Content.ReadFromJsonAsync<User>();
-                    _logger.LogInformation("Successfully added user {UserId}", userId);
                     return user;
                 }
                 
                 var error = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to add user {UserId}. Status: {Status}, Error: {Error}", 
-                    userId, response.StatusCode, error);
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding user {UserId}", userId);
                 return null;
             }
         }
@@ -185,7 +165,6 @@ namespace Frontend.Services
                     ? $"api/Word/random?userId={userId}&categoryId={categoryId}"
                     : $"api/Word/random?userId={userId}";
                 
-                _logger.LogInformation("Getting random word for user {UserId} from category {CategoryId}", userId, categoryId);
                 var response = await _httpClient.GetAsync(url);
                 
                 if (response.IsSuccessStatusCode)
@@ -194,14 +173,10 @@ namespace Frontend.Services
                     return word;
                 }
                 
-                var error = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to get random word. Status: {Status}, Error: {Error}", 
-                    response.StatusCode, error);
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting random word for user {UserId}", userId);
                 return null;
             }
         }
@@ -216,23 +191,17 @@ namespace Frontend.Services
         {
             try
             {
-                _logger.LogInformation("Adding word {WordId} to vocabulary for user {UserId}", wordId, userId);
                 var response = await _httpClient.PostAsync($"api/Word/vocabulary/add?userId={userId}&wordId={wordId}", null);
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("Successfully added word {WordId} to vocabulary for user {UserId}", wordId, userId);
                     return true;
                 }
                 
-                var error = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to add word to vocabulary. Status: {Status}, Error: {Error}", 
-                    response.StatusCode, error);
                 return false;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding word {WordId} to vocabulary for user {UserId}", wordId, userId);
                 return false;
             }
         }
@@ -244,7 +213,6 @@ namespace Frontend.Services
         {
             try
             {
-                _logger.LogInformation("Getting word: {WordId}", wordId);
                 var response = await _httpClient.GetAsync($"api/Word/{wordId}");
                 
                 if (response.IsSuccessStatusCode)
@@ -253,14 +221,10 @@ namespace Frontend.Services
                     return word;
                 }
                 
-                var error = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Word {WordId} not found. Status: {Status}, Error: {Error}", 
-                    wordId, response.StatusCode, error);
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting word {WordId}", wordId);
                 return null;
             }
         }
@@ -269,9 +233,6 @@ namespace Frontend.Services
         {
             try
             {
-                _logger.LogInformation("Adding custom word for user {UserId}: {Text} - {Translation}", 
-                    userId, text, translation);
-
                 var request = new CustomWordRequest
                 {
                     UserId = userId,
@@ -284,19 +245,13 @@ namespace Frontend.Services
                 if (response.IsSuccessStatusCode)
                 {
                     var word = await response.Content.ReadFromJsonAsync<Word>();
-                    _logger.LogInformation("Successfully added custom word {WordId} for user {UserId}", 
-                        word?.Id, userId);
                     return word;
                 }
 
-                var error = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to add custom word. Status: {Status}, Error: {Error}", 
-                    response.StatusCode, error);
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding custom word for user {UserId}", userId);
                 return null;
             }
         }
@@ -305,7 +260,6 @@ namespace Frontend.Services
         {
             try
             {
-                _logger.LogInformation("Getting random custom word for user {UserId}", userId);
                 var response = await _httpClient.GetAsync($"api/Word/custom/random?userId={userId}");
                 
                 if (response.IsSuccessStatusCode)
@@ -314,15 +268,48 @@ namespace Frontend.Services
                     return word;
                 }
                 
-                var error = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to get random custom word. Status: {Status}, Error: {Error}", 
-                    response.StatusCode, error);
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting random custom word for user {UserId}", userId);
                 return null;
+            }
+        }
+
+        public async Task<List<Word>?> GetAllCustomWordsAsync(long userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/Word/custom?userId={userId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var word = await response.Content.ReadFromJsonAsync<List<Word>>();
+                    return word;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        
+        public async Task<bool> DeleteCustomWord(long userId, long wordId)
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"api/Word/custom?userId={userId}&wordId={wordId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                return false;
             }
         }
 

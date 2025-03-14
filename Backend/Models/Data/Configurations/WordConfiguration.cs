@@ -1,8 +1,7 @@
-using Backend.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Backend.Data.Configurations;
+namespace Backend.Models.Data.Configurations;
 
 public class WordConfiguration : IEntityTypeConfiguration<Word>
 {

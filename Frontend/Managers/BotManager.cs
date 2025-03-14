@@ -6,7 +6,6 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using System.Text;
 using Frontend.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Frontend.Managers
 {
@@ -20,12 +19,9 @@ namespace Frontend.Managers
         private static ApiClient? _apiClient;
         private static CancellationTokenSource? _cts;
         private static readonly Dictionary<long, GeneratedTextResponse> _generatedTexts = new();
-        private static readonly ILogger _logger;
 
         static BotManager()
         {
-            _logger = LoggerFactory.Create(builder => builder.AddConsole())
-                .CreateLogger("BotManager");
         }
 
         /// <summary>
@@ -161,7 +157,6 @@ namespace Frontend.Managers
                 var data = callback.Data;
                 if (string.IsNullOrEmpty(data)) return;
 
-                _logger.LogInformation("Processing callback {Data} for user {ChatId}", data, chatId.Value);
 
                 var currentStage = UserStageManager.GetUserStage(chatId.Value);
 
@@ -170,13 +165,11 @@ namespace Frontend.Managers
                     case "learn_menu":
                         try
                         {
-                            _logger.LogInformation("Processing learn_menu callback for user {ChatId}", chatId.Value);
                             UserStageManager.SetUserStage(chatId.Value, UserStage.ChoosingCategory);
                             await ShowCategories(_bot!, chatId.Value, cancellationToken);
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, "Error processing learn_menu callback for user {ChatId}", chatId.Value);
                             await _bot!.SendTextMessageAsync(
                                 chatId: chatId.Value,
                                 text: "Произошла ошибка при загрузке категорий. Пожалуйста, попробуйте позже или используйте команду /learn.",
@@ -185,7 +178,6 @@ namespace Frontend.Managers
                         break;
                     case var s when s.StartsWith("learn_"):
                         var category = s[6..];
-                        _logger.LogInformation("User {ChatId} selected category {Category}", chatId.Value, category);
                         UserStageManager.SetUserStage(chatId.Value, UserStage.Learning);
                         UserStageManager.SetUserCurrentCategory(chatId.Value, category == "all" ? null : long.Parse(category));
                         await HandleCategoryLearning(chatId.Value, category, cancellationToken);
@@ -236,6 +228,16 @@ namespace Frontend.Managers
                         UserStageManager.SetUserStage(chatId.Value, UserStage.GeneratingText);
                         await HandleGenerateCommand(chatId.Value, cancellationToken);
                         break;
+                    case "show_my_words":
+                        await HandleShowMyWords(chatId.Value, cancellationToken);
+                        break;
+                    case var s when s.StartsWith("delete_myword_"):
+                        var wordIdString = s["delete_myword_".Length..];
+                        if (long.TryParse(wordIdString, out var wordCustomId))
+                        {
+                            await HandleDeleteMyWord(chatId.Value, wordCustomId, cancellationToken);
+                        }
+                        break;
                     default:
                         break;
                 }
@@ -246,7 +248,6 @@ namespace Frontend.Managers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in HandleCallbackAsync");
                 if (callback.Message?.Chat.Id != null)
                 {
                     await _bot!.SendTextMessageAsync(
@@ -254,6 +255,47 @@ namespace Frontend.Managers
                         text: "Произошла ошибка при обработке действия. Пожалуйста, попробуйте еще раз или вернитесь в главное меню.",
                         cancellationToken: cancellationToken);
                 }
+            }
+        }
+        
+        private static async Task HandleDeleteMyWord(long chatId, long wordId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                if (_apiClient == null)
+                {
+                    await _bot!.SendTextMessageAsync(
+                        chatId: chatId,
+                        text: "Произошла внутренняя ошибка. Пожалуйста, попробуйте позже.",
+                        cancellationToken: cancellationToken);
+                    return;
+                }
+
+                var success = await _apiClient.DeleteCustomWord(chatId, wordId);
+
+                if (success)
+                {
+                    await _bot!.SendTextMessageAsync(
+                        chatId: chatId,
+                        text: "✅ Слово успешно удалено.",
+                        cancellationToken: cancellationToken);
+                }
+                else
+                {
+                    await _bot!.SendTextMessageAsync(
+                        chatId: chatId,
+                        text: "❌ Не удалось удалить слово. Пожалуйста, попробуйте позже.",
+                        cancellationToken: cancellationToken);
+                }
+
+                await HandleShowMyWords(chatId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                await _bot!.SendTextMessageAsync(
+                    chatId: chatId,
+                    text: "Произошла ошибка при удалении слова. Пожалуйста, попробуйте позже.",
+                    cancellationToken: cancellationToken);
             }
         }
 
@@ -267,7 +309,6 @@ namespace Frontend.Managers
             var chatId = message.Chat.Id;
             try
             {
-                _logger.LogInformation("Processing /start command for user {ChatId}", chatId);
                 
                 var userExists = await _apiClient.UserExistsAsync(chatId);
                 if (!userExists)
@@ -292,7 +333,6 @@ namespace Frontend.Managers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing /start command for user {ChatId}", chatId);
                 await botClient.SendTextMessageAsync(
                     chatId: chatId,
                     text: "❌ Произошла ошибка. Пожалуйста, попробуйте позже.",
@@ -304,11 +344,8 @@ namespace Frontend.Managers
         {
             try
             {
-                _logger.LogInformation("Starting ShowCategories for user {ChatId}", chatId);
-                
                 if (_apiClient == null)
                 {
-                    _logger.LogError("ApiClient is null in ShowCategories for user {ChatId}", chatId);
                     await botClient.SendTextMessageAsync(
                         chatId: chatId,
                         text: "Произошла внутренняя ошибка. Пожалуйста, попробуйте позже.",
@@ -316,12 +353,10 @@ namespace Frontend.Managers
                     return;
                 }
 
-                _logger.LogInformation("Fetching categories for user {ChatId}", chatId);
                 var categories = await _apiClient.GetCategoriesAsync();
                 
                 if (categories == null || !categories.Any())
                 {
-                    _logger.LogWarning("No categories found for user {ChatId}", chatId);
                     await botClient.SendTextMessageAsync(
                         chatId: chatId,
                         text: "К сожалению, не удалось загрузить категории. Попробуйте позже.",
@@ -329,7 +364,6 @@ namespace Frontend.Managers
                     return;
                 }
 
-                _logger.LogInformation("Building category buttons for user {ChatId}", chatId);
                 var buttons = new List<InlineKeyboardButton[]>();
 
                 for (int i = 0; i < categories.Count; i += 2)
@@ -376,7 +410,6 @@ namespace Frontend.Managers
 
                 var keyboard = new InlineKeyboardMarkup(buttons);
 
-                _logger.LogInformation("Sending categories menu to user {ChatId}", chatId);
                 await botClient.SendTextMessageAsync(
                     chatId: chatId,
                     text: "📚 Выберите категорию для изучения:",
@@ -385,7 +418,6 @@ namespace Frontend.Managers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in ShowCategories for user {ChatId}", chatId);
                 await botClient.SendTextMessageAsync(
                     chatId: chatId,
                     text: "Произошла ошибка при загрузке категорий. Пожалуйста, попробуйте позже.",
@@ -409,29 +441,32 @@ namespace Frontend.Managers
                 _ => "📚"
             };
         }
-
+    
         private static async Task ShowHelp(long chatId, CancellationToken cancellationToken)
         {
             try
             {
                 var helpMessage = "📖 Справка по использованию бота:\n\n" +
-                                 "Основные команды:\n" +
-                                 "👋 /start - Начать работу с ботом\n" +
-                                 "📚 /learn - Начать изучение слов\n" +
-                                 "📝 /addword - Добавить своё слово\n" +
-                                 "❓ /help - Показать эту справку\n\n" +
-                                 "Как учить слова:\n" +
-                                 "1. Выберите категорию через команду /learn\n" +
-                                 "2. Бот будет показывать вам слова\n" +
-                                 "3. Отмечайте известные вам слова\n\n" +
-                                 "Как добавить своё слово:\n" +
-                                 "1. Используйте команду /addword\n" +
-                                 "2. Введите английское слово\n" +
-                                 "3. Введите русский перевод\n\n" +
-                                 "Советы:\n" +
-                                 "- Регулярно повторяйте изученные слова\n" +
-                                 "- Используйте слова в контексте\n" +
-                                 "- Учите понемногу, но каждый день";
+                                  "Основные команды:\n" +
+                                  "👋 /start - Начать работу с ботом\n" +
+                                  "📚 /learn - Начать изучение слов\n" +
+                                  "📝 /addword - Добавить своё слово\n" +
+                                  "📖 /vocabulary - Посмотреть изученные слова\n" +
+                                  "📝 /mywords - Посмотреть все слова из категории \"My Words\"\n" + // Новая команда
+                                  "✍️ /generate - Сгенерировать текст из изученных слов\n" +
+                                  "❓ /help - Показать эту справку\n\n" +
+                                  "Как учить слова:\n" +
+                                  "1. Выберите категорию через команду /learn\n" +
+                                  "2. Бот будет показывать вам слова\n" +
+                                  "3. Отмечайте известные вам слова\n\n" +
+                                  "Как добавить своё слово:\n" +
+                                  "1. Используйте команду /addword\n" +
+                                  "2. Введите английское слово\n" +
+                                  "3. Введите русский перевод\n\n" +
+                                  "Советы:\n" +
+                                  "- Регулярно повторяйте изученные слова\n" +
+                                  "- Используйте слова в контексте\n" +
+                                  "- Учите понемногу, но каждый день";
 
                 await _bot!.SendTextMessageAsync(
                     chatId: chatId,
@@ -451,29 +486,18 @@ namespace Frontend.Managers
         {
             try
             {
-                _logger.LogInformation("Starting HandleCategoryLearning for user {ChatId} with category {CategoryId}", chatId, categoryId);
-                
                 long? parsedCategoryId = categoryId == "all" ? null : long.Parse(categoryId);
                 
                 var categories = await _apiClient!.GetCategoriesAsync();
                 var category = categories?.FirstOrDefault(c => c.Id == parsedCategoryId);
                 
-                _logger.LogInformation("Found category: {CategoryInfo}", 
-                    category != null ? $"ID: {category.Id}, Name: {category.Name}" : "null");
-                
                 UserStageManager.SetUserCurrentCategory(chatId, parsedCategoryId);
                 
                 var selectedCategoryName = category?.Name ?? "all";
                 var isMyWordsCategory = category?.Name?.Equals("My Words", StringComparison.OrdinalIgnoreCase) == true;
-                
-                _logger.LogInformation("Category details - Name: {CategoryName}, IsMyWords: {IsMyWords}, ID: {CategoryId}", 
-                    selectedCategoryName, isMyWordsCategory, parsedCategoryId);
 
                 try
                 {
-                    _logger.LogInformation("Requesting word for user {ChatId} with categoryId {CategoryId} (isMyWords: {IsMyWords})", 
-                        chatId, parsedCategoryId, isMyWordsCategory);
-                        
                     Word? word = null;
                     try {
                         if (isMyWordsCategory) {
@@ -481,17 +505,13 @@ namespace Frontend.Managers
                                 word = await _apiClient!.GetRandomCustomWordAsync(chatId);
                                 if (word != null)
                                 {
-                                    // Находим правильное имя категории по ID
                                     var wordCategory = categories?.FirstOrDefault(c => c.Id == word.CategoryId);
                                     if (wordCategory != null)
                                     {
                                         word.CategoryName = wordCategory.Name;
                                     }
                                 }
-                                _logger.LogInformation("Successfully retrieved custom word for user {ChatId}", chatId);
                             } catch (System.Text.Json.JsonException jsonEx) {
-                                _logger.LogError(jsonEx, "JSON deserialization error in GetRandomCustomWordAsync for user {ChatId}. Message: {Message}, Path: {Path}", 
-                                    chatId, jsonEx.Message, jsonEx.Path);
                                 throw;
                             }
                         } else {
@@ -505,11 +525,9 @@ namespace Frontend.Managers
                                 }
                             }
                         }
-                        
-                        _logger.LogInformation("Get word result for user {ChatId}: {WordInfo}", 
-                            chatId, word != null ? $"Word: {word.Text}, CategoryId: {word.CategoryId}, Category: {word.CategoryName}" : "null");
-                    } catch (Exception ex) {
-                        _logger.LogError(ex, "Error getting word for user {ChatId}. Error type: {ErrorType}", chatId, ex.GetType().Name);
+                    } 
+                    catch (Exception ex) 
+                    {
                         throw;
                     }
                     
@@ -519,10 +537,7 @@ namespace Frontend.Managers
                             ? "В категории \"My Words\" пока нет слов для изучения. Возможно, вы уже выучили все добавленные слова или еще не добавили ни одного слова.\n\n" +
                               "Используйте команду /addword или кнопку \"📝 Добавить слово\", чтобы добавить новые слова."
                             : "😔 К сожалению, не удалось получить слово для изучения. Попробуйте другую категорию или повторите попытку позже.";
-
-                        _logger.LogInformation("No words found for user {ChatId} in category {CategoryName} (ID: {CategoryId})", 
-                            chatId, selectedCategoryName, parsedCategoryId);
-
+                        
                         await _bot!.SendTextMessageAsync(
                             chatId: chatId,
                             text: message,
@@ -558,9 +573,7 @@ namespace Frontend.Managers
                             cancellationToken: cancellationToken);
                         return;
                     }
-
-                    _logger.LogInformation("Sending word {WordId} ({Word}) to user {ChatId}", word.Id, word.Text, chatId);
-
+                    
                     string wordCategoryName = word.CategoryName;
                     string emojiForCategory = GetCategoryEmoji(wordCategoryName);
                     string messageText = string.Format("📝 Новое слово для изучения:\n\n🇬🇧 {0}\n📚 Категория: {1} {2}",
@@ -596,13 +609,11 @@ namespace Frontend.Managers
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error getting word for user {ChatId} in category {CategoryName}", chatId, selectedCategoryName);
                     throw;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in HandleCategoryLearning for user {ChatId}", chatId);
                 await _bot!.SendTextMessageAsync(
                     chatId: chatId,
                     text: "Произошла ошибка при получении слова. Пожалуйста, попробуйте позже.",
@@ -694,9 +705,6 @@ namespace Frontend.Managers
                 var category = categories?.FirstOrDefault(c => c.Id == currentCategory);
                 var isMyWordsCategory = category?.Name?.Equals("My Words", StringComparison.OrdinalIgnoreCase) == true;
                 
-                _logger.LogInformation("Processing known word {WordId} for user {ChatId} (Category: {Category}, IsMyWords: {IsMyWords})", 
-                    wordId, chatId, category?.Name ?? "Unknown", isMyWordsCategory);
-                
                 var success = await _apiClient.AddWordToVocabularyAsync(chatId, wordId);
                 
                 if (!success)
@@ -725,9 +733,6 @@ namespace Frontend.Managers
                         nextWord.Category.Name = wordCategory.Name;
                     }
                 }
-                
-                _logger.LogInformation("Got next word for user {ChatId}: {WordInfo}", 
-                    chatId, nextWord != null ? $"Word: {nextWord.Text}, CategoryId: {nextWord.CategoryId}, Category: {nextWord.CategoryName}" : "null");
                 
                 if (nextWord == null)
                 {
@@ -777,7 +782,6 @@ namespace Frontend.Managers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in HandleKnownWord for user {ChatId}", chatId);
                 await _bot!.SendTextMessageAsync(
                     chatId: chatId,
                     text: "Произошла ошибка при обработке слова. Пожалуйста, попробуйте позже.",
@@ -864,7 +868,6 @@ namespace Frontend.Managers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in HandleGenerateCommand for user {ChatId}", chatId);
                 await _bot!.SendTextMessageAsync(
                     chatId: chatId,
                     text: "❌ Извините, произошла ошибка при генерации текста. Пожалуйста, попробуйте позже.",
@@ -945,7 +948,6 @@ namespace Frontend.Managers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in HandleVocabularyCommand for user {ChatId}", chatId);
                 await _bot!.SendTextMessageAsync(
                     chatId: chatId,
                     text: "Извините, произошла ошибка при получении словаря. Пожалуйста, попробуйте позже.",
@@ -987,15 +989,11 @@ namespace Frontend.Managers
                     UserStageManager.ResetUserState(chatId);
                     return;
                 }
-
-                _logger.LogInformation("Adding custom word '{Word}' with translation '{Translation}' for user {ChatId}", 
-                    englishWord, translation, chatId);
-
+                
                 try
                 {
                     var word = await _apiClient!.AddCustomWordAsync(chatId, englishWord, translation);
                     
-                    // Получаем категории для определения правильного ID категории "My Words"
                     var categories = await _apiClient.GetCategoriesAsync();
                     var myWordsCategory = categories?.FirstOrDefault(c => c.Name?.Equals("My Words", StringComparison.OrdinalIgnoreCase) == true);
                     
@@ -1025,11 +1023,9 @@ namespace Frontend.Managers
                         replyMarkup: keyboard,
                         cancellationToken: cancellationToken);
                     
-                    _logger.LogInformation("Successfully added word {Word} for user {ChatId}", englishWord, chatId);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error while adding word {Word} for user {ChatId}", englishWord, chatId);
                     await _bot!.SendTextMessageAsync(
                         chatId: chatId,
                         text: "❌ Произошла ошибка при добавлении слова. Пожалуйста, попробуйте позже.",
@@ -1038,7 +1034,6 @@ namespace Frontend.Managers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in HandleAddWordStep2 for user {ChatId}", chatId);
                 await _bot!.SendTextMessageAsync(
                     chatId: chatId,
                     text: "Произошла ошибка при добавлении слова. Пожалуйста, попробуйте позже.",
@@ -1049,17 +1044,113 @@ namespace Frontend.Managers
                 UserStageManager.ResetUserState(chatId);
             }
         }
+        
+        private static async Task HandleShowMyWords(long chatId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                if (_apiClient == null)
+                {
+                    await _bot!.SendTextMessageAsync(
+                        chatId: chatId,
+                        text: "Произошла внутренняя ошибка. Пожалуйста, попробуйте позже.",
+                        cancellationToken: cancellationToken);
+                    return;
+                }
+
+                var categories = await _apiClient.GetCategoriesAsync();
+                var myWordsCategory = categories?.FirstOrDefault(c => c.Name?.Equals("My Words", StringComparison.OrdinalIgnoreCase) == true);
+                Console.WriteLine(myWordsCategory);
+                
+                if (myWordsCategory == null)
+                {
+                    await _bot!.SendTextMessageAsync(
+                        chatId: chatId,
+                        text: "Категория \"My Words\" не найдена.",
+                        cancellationToken: cancellationToken);
+                    return;
+                }
+
+                var vocabulary = await _apiClient.GetAllCustomWordsAsync(chatId);
+                Console.WriteLine(vocabulary.Count);
+                
+                if (vocabulary == null || !vocabulary.Any())
+                {
+                    Console.WriteLine("Тут");
+                    await _bot!.SendTextMessageAsync(
+                        chatId: chatId,
+                        text: "У вас пока нет слов в категории \"My Words\".",
+                        cancellationToken: cancellationToken);
+                    return;
+                }
+
+                var myWords = vocabulary
+                    .Where(word => word.CategoryId == myWordsCategory.Id)
+                    .ToList();
+                
+                Console.WriteLine(myWords.Count);
+                if (!myWords.Any())
+                {
+                    await _bot!.SendTextMessageAsync(
+                        chatId: chatId,
+                        text: "У вас пока нет слов в категории \"My Words\".",
+                        cancellationToken: cancellationToken);
+                    return;
+                }
+
+                var message = new StringBuilder("📝 *Ваши слова в категории \"My Words\":*\n\n");
+
+                foreach (var word in myWords)
+                {
+                    message.AppendLine($"• {word.Text} - {word.Translation}");
+                }
+
+                var buttons = new List<InlineKeyboardButton[]>();
+                foreach (var word in myWords)
+                {
+                    buttons.Add(new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData(
+                            text: $"❌ Удалить \"{word.Text}\"",
+                            callbackData: $"delete_myword_{word.Id}")
+                    });
+                }
+
+                buttons.Add(new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "📚 Учить слова", callbackData: "learn_menu"),
+                    InlineKeyboardButton.WithCallbackData(text: "🔙 В меню", callbackData: "return_menu")
+                });
+
+                var keyboard = new InlineKeyboardMarkup(buttons);
+
+                await _bot!.SendTextMessageAsync(
+                    chatId: chatId,
+                    text: message.ToString(),
+                    parseMode: ParseMode.Markdown,
+                    replyMarkup: keyboard,
+                    cancellationToken: cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                await _bot!.SendTextMessageAsync(
+                    chatId: chatId,
+                    text: "Произошла ошибка при получении слов. Пожалуйста, попробуйте позже.",
+                    cancellationToken: cancellationToken);
+            }
+        }
 
         private static async Task ShowMainMenu(ITelegramBotClient botClient, long chatId, CancellationToken cancellationToken)
         {
             var mainMenuMessage = "👋 Добро пожаловать в бот для изучения английских слов!\n\n" +
-                                "Доступные команды:\n" +
-                                "📚 /learn - Начать изучение слов\n" +
-                                "📝 /addword - Добавить своё слово\n" +
-                                "📖 /vocabulary - Посмотреть изученные слова\n" +
-                                "✍️ /generate - Сгенерировать текст из изученных слов\n" +
-                                "❓ /help - Подробная справка\n\n" +
-                                "Выберите действие:";
+                                  "Доступные команды:\n" +
+                                  "📚 /learn - Начать изучение слов\n" +
+                                  "📝 /addword - Добавить своё слово\n" +
+                                  "📖 /vocabulary - Посмотреть изученные слова\n" +
+                                  "📝 /mywords - Посмотреть все слова из категории \"My Words\"\n" +
+                                  "✍️ /generate - Сгенерировать текст из изученных слов\n" +
+                                  "❓ /help - Подробная справка\n\n" +
+                                  "Выберите действие:";
 
             var keyboard = new InlineKeyboardMarkup(new[]
             {
@@ -1070,7 +1161,11 @@ namespace Frontend.Managers
                 },
                 new[]
                 {
-                    InlineKeyboardButton.WithCallbackData(text: "📖 Мой словарь", callbackData: "show_vocabulary"),
+                    InlineKeyboardButton.WithCallbackData(text: "📖 Изученные слова", callbackData: "show_vocabulary"),
+                    InlineKeyboardButton.WithCallbackData(text: "📝 Мои слова", callbackData: "show_my_words")
+                },
+                new[]
+                {
                     InlineKeyboardButton.WithCallbackData(text: "✍️ Генерировать текст", callbackData: "generate_text")
                 }
             });

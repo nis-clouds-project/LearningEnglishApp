@@ -1,23 +1,19 @@
-using Backend.Data;
-using Backend.Exceptions;
 using Backend.Models;
+using Backend.Models.Data;
 using Backend.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Backend.Services;
 
 public class DbWordManager : IWordManager
 {
     private readonly AppDbContext _context;
-    private readonly ILogger<DbWordManager> _logger;
     private readonly IUserManager _userManager;
     private readonly Random _random = new();
 
-    public DbWordManager(AppDbContext context, ILogger<DbWordManager> logger, IUserManager userManager)
+    public DbWordManager(AppDbContext context, IUserManager userManager)
     {
         _context = context;
-        _logger = logger;
         _userManager = userManager;
     }
 
@@ -31,7 +27,6 @@ public class DbWordManager : IWordManager
             var user = await _userManager.GetUserByIdAsync(userId);
             if (user == null)
             {
-                _logger.LogWarning("User {UserId} not found", userId);
                 return new List<Word>();
             }
 
@@ -46,7 +41,6 @@ public class DbWordManager : IWordManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting learned words for user {UserId}", userId);
             return new List<Word>();
         }
     }
@@ -58,7 +52,6 @@ public class DbWordManager : IWordManager
             var user = await _userManager.GetUserByIdAsync(userId);
             if (user == null)
             {
-                _logger.LogWarning("User {UserId} not found", userId);
                 return new List<Word>();
             }
 
@@ -74,33 +67,8 @@ public class DbWordManager : IWordManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting random words for text generation for user {UserId}", userId);
             return new List<Word>();
         }
-    }
-
-    public async Task<bool> AddWordToUserVocabularyAsync(long userId, long wordId)
-    {
-        var user = await _userManager.GetUserByIdAsync(userId);
-        if (user == null)
-        {
-            throw new UserNotFoundException($"Пользователь с ID {userId} не найден");
-        }
-
-        var word = await GetWordByIdAsync(wordId);
-        if (word == null)
-        {
-            throw new KeyNotFoundException($"Слово с ID {wordId} не найдено");
-        }
-
-        if (user.learned_words.Contains(wordId))
-        {
-            throw new WordAlreadyInVocabularyException();
-        }
-
-        user.learned_words.Add(wordId);
-        await _context.SaveChangesAsync();
-        return true;
     }
 
     public async Task<Word?> GetRandomWordAsync(long userId, long? categoryId = null)
@@ -110,26 +78,21 @@ public class DbWordManager : IWordManager
             var user = await _userManager.GetUserByIdAsync(userId);
             if (user == null)
             {
-                _logger.LogWarning("User {UserId} not found", userId);
                 return null;
             }
 
             var query = _context.Words.AsQueryable();
 
-            // Фильтруем по категории
             if (categoryId.HasValue)
             {
                 query = query.Where(w => w.category_id == categoryId.Value);
             }
 
-            // Исключаем изученные слова и берем только системные слова
             query = query.Where(w => !user.learned_words.Contains(w.Id) && w.user_id == DbInitializer.SystemUserId);
 
-            // Получаем случайное слово
             var wordsCount = await query.CountAsync();
             if (wordsCount == 0)
             {
-                _logger.LogWarning("No words available for learning for user {UserId} in category {CategoryId}", userId, categoryId);
                 return null;
             }
 
@@ -138,40 +101,6 @@ public class DbWordManager : IWordManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting random word for user {UserId}", userId);
-            return null;
-        }
-    }
-
-    public async Task<Word?> GetRandomWordForLearningAsync(long userId, long categoryId)
-    {
-        try
-        {
-            var user = await _userManager.GetUserByIdAsync(userId);
-            if (user == null)
-            {
-                _logger.LogWarning("User {UserId} not found", userId);
-                return null;
-            }
-
-            var query = _context.Words
-                .Where(w => w.category_id == categoryId)
-                .Where(w => !user.learned_words.Contains(w.Id))
-                .Where(w => w.user_id == DbInitializer.SystemUserId);
-
-            var wordsCount = await query.CountAsync();
-            if (wordsCount == 0)
-            {
-                _logger.LogWarning("No words available for learning for user {UserId} in category {CategoryId}", userId, categoryId);
-                return null;
-            }
-
-            var randomSkip = _random.Next(wordsCount);
-            return await query.Skip(randomSkip).FirstOrDefaultAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting random word for learning for user {UserId}", userId);
             return null;
         }
     }
@@ -184,7 +113,6 @@ public class DbWordManager : IWordManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting word {WordId}", wordId);
             return null;
         }
     }
@@ -206,14 +134,12 @@ public class DbWordManager : IWordManager
             _context.Words.Add(word);
             await _context.SaveChangesAsync();
 
-            // Добавляем слово в список пользовательских слов
             await _userManager.AddCustomWordToListAsync(userId, word.Id);
 
             return word;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error adding custom word for user {UserId}", userId);
             throw;
         }
     }
@@ -225,14 +151,12 @@ public class DbWordManager : IWordManager
             var user = await _userManager.GetUserByIdAsync(userId);
             if (user == null)
             {
-                _logger.LogWarning("User {UserId} not found", userId);
                 return false;
             }
 
             var word = await _context.Words.FindAsync(wordId);
             if (word == null)
             {
-                _logger.LogWarning("Word {WordId} not found", wordId);
                 return false;
             }
 
@@ -240,7 +164,6 @@ public class DbWordManager : IWordManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error adding word {WordId} to vocabulary for user {UserId}", wordId, userId);
             return false;
         }
     }
@@ -256,7 +179,6 @@ public class DbWordManager : IWordManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting words for category {CategoryId}", categoryId);
             return new List<Word>();
         }
     }
@@ -272,7 +194,6 @@ public class DbWordManager : IWordManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting custom words for user {UserId}", userId);
             return new List<Word>();
         }
     }
@@ -304,7 +225,6 @@ public class DbWordManager : IWordManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting custom word {WordId} for user {UserId}", wordId, userId);
             return false;
         }
     }
@@ -319,7 +239,6 @@ public class DbWordManager : IWordManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting all categories");
             return new List<Category>();
         }
     }
@@ -336,12 +255,10 @@ public class DbWordManager : IWordManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting all words");
             return new List<Word>();
         }
     }
-
-    /// <inheritdoc />
+    
     public async Task<Word?> GetRandomCustomWordAsync(long userId)
     {
         try
@@ -349,7 +266,6 @@ public class DbWordManager : IWordManager
             var user = await _userManager.GetUserByIdAsync(userId);
             if (user == null)
             {
-                _logger.LogWarning("User {UserId} not found", userId);
                 return null;
             }
 
@@ -358,7 +274,6 @@ public class DbWordManager : IWordManager
             
             if (myWordsCategory == null)
             {
-                _logger.LogError("My Words category not found");
                 return null;
             }
 
@@ -369,18 +284,15 @@ public class DbWordManager : IWordManager
             
             if (!userWords.Any())
             {
-                _logger.LogInformation("No words found in My Words category for user {UserId}", userId);
                 return null;
             }
 
-            // Используем learned_words из объекта пользователя
             var availableWords = userWords
                 .Where(w => !user.learned_words.Contains(w.Id))
                 .ToList();
 
             if (!availableWords.Any())
             {
-                _logger.LogInformation("All words in My Words category have been learned for user {UserId}", userId);
                 return null;
             }
 
@@ -389,7 +301,6 @@ public class DbWordManager : IWordManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting random custom word for user {UserId}", userId);
             throw;
         }
     }
