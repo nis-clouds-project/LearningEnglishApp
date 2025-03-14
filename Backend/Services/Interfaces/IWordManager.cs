@@ -45,11 +45,6 @@ public interface IWordManager
     Task<List<Word>> GetWordsByCategory(long categoryId);
 
     /// <summary>
-    /// Получает случайное слово для изучения
-    /// </summary>
-    Task<Word?> GetRandomWordForLearningAsync(long userId, long categoryId);
-
-    /// <summary>
     /// Получает слово по ID
     /// </summary>
     Task<Word?> GetWordByIdAsync(long wordId);

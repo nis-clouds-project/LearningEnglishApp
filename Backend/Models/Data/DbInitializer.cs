@@ -1,8 +1,6 @@
-using Backend.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
-namespace Backend.Data;
+namespace Backend.Models.Data;
 
 public static class DbInitializer
 {
@@ -33,14 +31,12 @@ public static class DbInitializer
         if (!hasCategories)
         {
             Console.WriteLine("Adding categories...");
-            // Получаем уникальные категории из InitialWords
             var uniqueCategories = InitialWords
                 .Select(w => w.category)
                 .Distinct()
                 .Select(name => new Category { Name = name })
                 .ToList();
 
-            // Добавляем специальные категории, если их нет
             var specialCategories = new[]
             {
                 "My Words",

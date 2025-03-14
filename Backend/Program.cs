@@ -1,13 +1,12 @@
-using Backend.Data;
 using Backend.Integrations;
 using Backend.Integrations.Interfaces;
+using Backend.Models.Data;
 using Backend.Services;
 using Backend.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -26,15 +25,13 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register services
 builder.Services.AddScoped<IUserManager, DbUserManager>();
 builder.Services.AddScoped<IWordManager, DbWordManager>();
 builder.Services.AddScoped<ITextGenerator, GigaChatTextGenerator>();
-builder.Services.AddScoped<Backend.Integrations.Interfaces.ITokenService, Backend.Integrations.TokenService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 
 var app = builder.Build();
 
-// Add database initialization
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;

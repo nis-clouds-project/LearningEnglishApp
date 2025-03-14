@@ -16,7 +16,6 @@ namespace Backend.Controllers
     {
         private readonly IWordManager _wordManager;
         private readonly ITextGenerator _textGenerator;
-        private readonly ILogger<TextGenerationController> _logger;
 
         /// <summary>
         /// Конструктор для внедрения зависимостей ITextGenerator и ILogger.
@@ -26,12 +25,10 @@ namespace Backend.Controllers
         /// <param name="logger">Логгер для логирования ошибок.</param>
         public TextGenerationController(
             IWordManager wordManager,
-            ITextGenerator textGenerator,
-            ILogger<TextGenerationController> logger)
+            ITextGenerator textGenerator)
         {
             _wordManager = wordManager;
             _textGenerator = textGenerator;
-            _logger = logger;
         }
 
         /// <summary>
@@ -68,7 +65,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error generating text for userId: {UserId}", userId);
                 return StatusCode(500, "Error generating text");
             }
         }

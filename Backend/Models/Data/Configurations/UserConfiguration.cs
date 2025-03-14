@@ -1,9 +1,8 @@
-using Backend.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Newtonsoft.Json;
 
-namespace Backend.Data.Configurations;
+namespace Backend.Models.Data.Configurations;
 
 public class UserConfiguration : IEntityTypeConfiguration<User>
 {
