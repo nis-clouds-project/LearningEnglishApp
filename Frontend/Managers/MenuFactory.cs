@@ -1,6 +1,6 @@
 ﻿namespace Frontend.Managers;
 
-public class MenuFactory
+public static class MenuFactory
 {
     public static string GetCategoryEmoji(string? categoryName)
     {

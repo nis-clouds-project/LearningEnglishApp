@@ -96,6 +96,14 @@ public static class CallbackManager
                         await LearningManager.HandleDeleteMyWord(chatId.Value, wordCustomId, cancellationToken);
                     }
                     break;
+                case var s when s.StartsWith("practise_"):
+                    var catIdStr = s.Substring("practise_".Length);
+                    if (long.TryParse(catIdStr, out var catId))
+                    {
+                        UserStageManager.SetUserCurrentCategory(chatId.Value, catId);
+                        await PractisingManager.HandlePracticeIteration(chatId.Value, catId, cancellationToken);
+                    }
+                    break;
                 default:
                     break;
             }

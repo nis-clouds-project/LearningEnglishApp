@@ -31,6 +31,9 @@ public static class UpdateRoute
                     case UserStage.AddingTranslation:
                         await VocabularyManager.HandleAddWordStep2(chatId, messageText, cancellationToken);
                         return;
+                    case UserStage.Practising:
+                        await PractisingManager.HandlePracticeAnswer(chatId, messageText, cancellationToken);
+                        return;
                 }
 
                 switch (messageText.ToLower())
@@ -63,6 +66,10 @@ public static class UpdateRoute
                         break;
                     case "/mywords":
                         await VocabularyManager.HandleShowMyWords(chatId, cancellationToken);
+                        break;
+                    case "/practise":
+                        UserStageManager.ResetUserState(chatId);
+                        await PractisingManager.HandlePracticeCommand(chatId, cancellationToken);
                         break;
                     default:
                         await BotManager.Bot!.SendTextMessageAsync(
