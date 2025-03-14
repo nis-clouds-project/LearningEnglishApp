@@ -74,6 +74,10 @@ public static class CallbackManager
                     UserStageManager.ResetUserState(chatId.Value);
                     await MessageCommandManager.ShowMainMenu(BotManager.Bot!, chatId.Value, cancellationToken);
                     break;
+                case "practise_menu":
+                    UserStageManager.ResetUserState(chatId.Value);
+                    await PractisingManager.HandlePracticeCommand(chatId.Value, cancellationToken);
+                    break;
                 case "add_word":
                     UserStageManager.SetUserStage(chatId.Value, UserStage.AddingWord);
                     await VocabularyManager.StartAddWord(chatId.Value, cancellationToken);
@@ -94,6 +98,14 @@ public static class CallbackManager
                     if (long.TryParse(wordIdString, out var wordCustomId))
                     {
                         await LearningManager.HandleDeleteMyWord(chatId.Value, wordCustomId, cancellationToken);
+                    }
+                    break;
+                case var s when s.StartsWith("practise_"):
+                    var catIdStr = s.Substring("practise_".Length);
+                    if (long.TryParse(catIdStr, out var catId))
+                    {
+                        UserStageManager.SetUserCurrentCategory(chatId.Value, catId);
+                        await PractisingManager.HandlePracticeIteration(chatId.Value, catId, cancellationToken);
                     }
                     break;
                 default:
