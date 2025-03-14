@@ -21,7 +21,7 @@ namespace Frontend.Managers
         /// </summary>
         public static async Task StartAsync()
         {
-            var token = Environment.GetEnvironmentVariable("TELEGRAMBotManager.Bot_TOKEN") 
+            var token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN") 
                        ?? throw new InvalidOperationException("TELEGRAMBotManager.Bot_TOKEN не задан");
             var baseUrl = Environment.GetEnvironmentVariable("BACKEND_API_URL") 
                        ?? throw new InvalidOperationException("BACKEND_API_URL не задан");
@@ -39,7 +39,7 @@ namespace Frontend.Managers
 
             try
             {
-                await Bot.GetMeAsync(_cts.Token);
+                var me = await Bot.GetMeAsync(_cts.Token);
 
                 Bot.StartReceiving(
                     updateHandler: UpdateRoute.HandleUpdateAsync,

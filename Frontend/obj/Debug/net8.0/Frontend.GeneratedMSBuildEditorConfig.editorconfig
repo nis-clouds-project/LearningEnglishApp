@@ -8,6 +8,6 @@ build_property.PlatformNeutralAssembly =
 build_property.EnforceExtendedAnalyzerRules = 
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = Frontend
-build_property.ProjectDir = D:\c# projects\LearningEnglishApp\Frontend\
+build_property.ProjectDir = /Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend/
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
