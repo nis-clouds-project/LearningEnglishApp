@@ -1,10 +1,8 @@
 using Backend.Controllers.Responses;
-using Backend.Exceptions;
 using Backend.Integrations.Interfaces;
 using Backend.Models;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Controllers
 {
@@ -13,12 +11,11 @@ namespace Backend.Controllers
     /// Предоставляет API для управления словами, включая получение случайных слов и добавление слов в словарь пользователя.
     /// </summary>
     [ApiController]
-    [Route("api/[controller]")] // Базовый маршрут для контроллера: /api/word
+    [Route("api/[controller]")]
     public class WordController : ControllerBase
     {
         private readonly IWordManager _wordManager;
         private readonly ITextGenerator _textGenerator;
-        private readonly ILogger<WordController> _logger;
 
         /// <summary>
         /// Конструктор для внедрения зависимости IWordManager и IUserManager.
@@ -28,11 +25,10 @@ namespace Backend.Controllers
         /// <param name="textGenerator">Сервис для генерации текста.</param>
         /// <param name="logger">Логгер для логирования.</param>
         /// <param name="context">Контекст базы данных.</param>
-        public WordController(IWordManager wordManager, ITextGenerator textGenerator, ILogger<WordController> logger)
+        public WordController(IWordManager wordManager, ITextGenerator textGenerator)
         {
             _wordManager = wordManager;
             _textGenerator = textGenerator;
-            _logger = logger;
         }
 
         /// <summary>
@@ -51,7 +47,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting all words");
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -75,9 +70,8 @@ namespace Backend.Controllers
                     return NotFound("Недостаточно слов для генерации текста");
                 }
 
-                // Создаем словарь слов с переводами для генерации текста
                 var wordsWithTranslations = words.ToDictionary(w => w.Text, w => w.Translation);
-                
+
                 var generatedText = await _textGenerator.GenerateTextWithTranslationsAsync(wordsWithTranslations);
                 return Ok(new
                 {
@@ -86,13 +80,9 @@ namespace Backend.Controllers
                     words = wordsWithTranslations
                 });
             }
-            catch (UserNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return NotFound(ex.Message);
             }
         }
 
@@ -119,7 +109,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting random word for user {UserId}", userId);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -147,43 +136,9 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding word {WordId} to vocabulary for user {UserId}", wordId, userId);
                 return StatusCode(500, "Internal server error");
             }
         }
-
-        /// <summary>
-        /// Получает случайное слово для изучения.
-        /// </summary>
-        /// <param name="userId">Идентификатор пользователя.</param>
-        /// <param name="categoryId">Идентификатор категории слов.</param>
-        /// <returns>Слово для изучения.</returns>
-        /// <response code="200">Слово успешно получено.</response>
-        /// <response code="403">Нет доступных слов для изучения.</response>
-        /// <response code="404">Пользователь не найден.</response>
-        // [HttpGet("random-word")]
-        // public async Task<IActionResult> GetRandomWordForLearningAsync(
-        //     [FromQuery] long userId,
-        //     [FromQuery] long categoryId)
-        // {
-        //     try
-        //     {
-        //         var word = await _wordManager.GetRandomWordForLearningAsync(userId, categoryId);
-        //         return Ok(word);
-        //     }
-        //     catch (NoWordsAvailableException ex)
-        //     {
-        //         return StatusCode(409, ex.Message);
-        //     }
-        //     catch (UserNotFoundException ex)
-        //     {
-        //         return NotFound(ex.Message);
-        //     }
-        //     catch (Exception)
-        //     {
-        //         return StatusCode(500, "Непредвиденная ошибка");
-        //     }
-        // }
 
         /// <summary>
         /// Получает слово по его идентификатору.
@@ -206,7 +161,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting word {WordId}", wordId);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -228,7 +182,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting words for category {CategoryId}", categoryId);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -251,7 +204,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting learned words for user {UserId}", userId);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -273,7 +225,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting custom words for user {UserId}", userId);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -320,7 +271,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding custom word for user {UserId}", request?.UserId);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -333,8 +283,8 @@ namespace Backend.Controllers
         /// <returns>Результат операции.</returns>
         /// <response code="200">Слово успешно удалено.</response>
         /// <response code="404">Слово не найдено или не принадлежит пользователю.</response>
-        [HttpDelete("custom/{wordId}")]
-        public async Task<IActionResult> DeleteCustomWord([FromQuery] long userId, long wordId)
+        [HttpDelete("custom")]
+        public async Task<IActionResult> DeleteCustomWord([FromQuery] long userId, [FromQuery] long wordId)
         {
             try
             {
@@ -347,7 +297,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting custom word {WordId} for user {UserId}", wordId, userId);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -365,7 +314,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting categories");
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -401,7 +349,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting random custom word for user {UserId}", userId);
                 return StatusCode(500, "Internal server error while getting random word");
             }
         }
