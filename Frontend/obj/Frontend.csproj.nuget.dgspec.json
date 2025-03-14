@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend/Frontend.csproj": {}
+    "D:\\c# projects\\LearningEnglishApp\\Frontend\\Frontend.csproj": {}
   },
   "projects": {
-    "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend/Frontend.csproj": {
+    "D:\\c# projects\\LearningEnglishApp\\Frontend\\Frontend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend/Frontend.csproj",
+        "projectUniqueName": "D:\\c# projects\\LearningEnglishApp\\Frontend\\Frontend.csproj",
         "projectName": "Frontend",
-        "projectPath": "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend/Frontend.csproj",
-        "packagesPath": "/Users/ilakonev/.nuget/packages/",
-        "outputPath": "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend/obj/",
+        "projectPath": "D:\\c# projects\\LearningEnglishApp\\Frontend\\Frontend.csproj",
+        "packagesPath": "C:\\Users\\never\\.nuget\\packages\\",
+        "outputPath": "D:\\c# projects\\LearningEnglishApp\\Frontend\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/ilakonev/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\never\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
@@ -98,7 +98,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.204/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Users\\never\\.dotnet\\sdk\\8.0.406/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
