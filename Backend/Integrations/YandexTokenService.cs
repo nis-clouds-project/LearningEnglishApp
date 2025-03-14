@@ -38,20 +38,22 @@ namespace Backend.Integrations
         }
 
         /// <summary>
-        /// Получает текущий IAM токен. Если токен истек или отсутствует, запрашивает новый.
+        /// Получает текущий IAM токен асинхронно. Если токен истек или отсутствует, запрашивает новый.
         /// </summary>
-        public string GetIamToken()
+        public async Task<string> GetIamTokenAsync()
         {
             lock (_lockObject)
             {
-                if (string.IsNullOrEmpty(_iamToken) || DateTime.UtcNow >= _tokenExpiry)
+                if (!string.IsNullOrEmpty(_iamToken) && DateTime.UtcNow < _tokenExpiry)
                 {
-                    _logger.LogInformation("IAM токен истек или отсутствует. Запрашиваем новый...");
-                    RequestNewToken().Wait();
+                    return _iamToken;
                 }
-
-                return _iamToken ?? throw new InvalidOperationException("Failed to obtain IAM token");
             }
+
+            _logger.LogInformation("IAM токен истек или отсутствует. Запрашиваем новый...");
+            await RequestNewToken();
+            
+            return _iamToken ?? throw new InvalidOperationException("Failed to obtain IAM token");
         }
 
         /// <summary>
@@ -134,13 +136,21 @@ namespace Backend.Integrations
             }
         }
 
-        public async Task<string> GetIamTokenAsync()
+        /// <summary>
+        /// Обновляет токен вручную
+        /// </summary>
+        public async Task RefreshTokenAsync()
         {
-            if (string.IsNullOrEmpty(_iamToken))
+            try
             {
+                _logger.LogInformation("Manually refreshing IAM token");
                 await RequestNewToken();
             }
-            return _iamToken;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during manual token refresh");
+                throw;
+            }
         }
 
         private class TokenResponse

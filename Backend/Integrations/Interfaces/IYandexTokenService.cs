@@ -5,5 +5,6 @@ namespace Backend.Integrations.Interfaces
         Task<string> GetIamTokenAsync();
         string GetFolderId();
         Task StartTokenRefreshAsync(CancellationToken cancellationToken);
+        Task RefreshTokenAsync();
     }
 }

@@ -34,9 +34,9 @@ builder.Services.AddScoped<ITextGenerator, GigaChatTextGenerator>();
 builder.Services.AddScoped<Backend.Integrations.Interfaces.ITokenService, Backend.Integrations.TokenService>();
 
 // Register translator service
-builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IYandexTokenService, YandexTokenService>();
-builder.Services.AddScoped<ITranslatorService, TranslatorService>();
+builder.Services.AddSingleton<HttpClient>();
+builder.Services.AddSingleton<ITranslatorService, TranslatorService>();
 builder.Services.AddHostedService<YandexTokenBackgroundService>();
 
 var app = builder.Build();
