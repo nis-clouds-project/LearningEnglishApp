@@ -108,6 +108,7 @@ public static class DbInitializer
         };
     }
 
+    // obviosly, this should be stored in the database
     private static readonly List<(string text, string translation, string category)> InitialWords = new()
     {
         // Common Words
