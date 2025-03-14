@@ -9,7 +9,8 @@ namespace Frontend.Managers
         GeneratingText,
         ViewingVocabulary,
         AddingWord,
-        AddingTranslation
+        AddingTranslation,
+        Practising
     }   
     
     public static class UserStageManager
