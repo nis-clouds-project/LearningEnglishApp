@@ -1,8 +1,6 @@
 using Frontend.Services;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
-using Telegram.Bot.Types.Enums;
-using Frontend.Models;
 
 namespace Frontend.Managers
 {
@@ -22,7 +20,7 @@ namespace Frontend.Managers
         public static async Task StartAsync()
         {
             var token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN") 
-                       ?? throw new InvalidOperationException("TELEGRAMBotManager.Bot_TOKEN не задан");
+                       ?? throw new InvalidOperationException("TELEGRAM_BOT_TOKEN не задан");
             var baseUrl = Environment.GetEnvironmentVariable("BACKEND_API_URL") 
                        ?? throw new InvalidOperationException("BACKEND_API_URL не задан");
             
