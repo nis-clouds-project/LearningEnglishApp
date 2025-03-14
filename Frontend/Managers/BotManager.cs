@@ -133,6 +133,9 @@ namespace Frontend.Managers
                     case "/addword":
                         await StartAddWord(chatId, cancellationToken);
                         break;
+                    case "/mywords":
+                        await HandleShowMyWords(chatId, cancellationToken);
+                        break;
                     default:
                         await _bot!.SendTextMessageAsync(
                             chatId: chatId,
