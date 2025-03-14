@@ -12,6 +12,8 @@ services:
     - "/app/bin/Debug/net8.0/Backend.dll"
     environment:
       ASPNETCORE_STATICWEBASSETS: "/app/bin/Debug/net8.0/Backend.staticwebassets.runtime.CT.json"
+      Yandex__OAuthToken: ${YANDEX_OAUTH_TOKEN}
+      Yandex__FolderId: ${YANDEX_FOLDER_ID}
     image: "learning_english_api:dev"
     ports: []
     volumes:

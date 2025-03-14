@@ -1,3 +1,4 @@
+using Frontend.Models;
 
 namespace Frontend.Managers
 {
@@ -9,14 +10,17 @@ namespace Frontend.Managers
         GeneratingText,
         ViewingVocabulary,
         AddingWord,
-        AddingTranslation
+        AddingTranslation,
+        ChoosingTranslationDirection,
+        EnteringWordForTranslation
     }   
     
     public static class UserStageManager
     {
         private static readonly Dictionary<long, UserStage> _userStages = new();
         private static readonly Dictionary<long, long?> _userCurrentCategories = new();
-        private static readonly Dictionary<long, string> _tempWordStorage = new();  
+        private static readonly Dictionary<long, string> _tempWordStorage = new(); 
+        private static readonly Dictionary<long, TranslationDirection> _userTranslationDirections = new(); 
         public static UserStage GetUserStage(long userId)
         {
             return _userStages.TryGetValue(userId, out var stage) ? stage : UserStage.Initial;
@@ -30,6 +34,7 @@ namespace Frontend.Managers
             _userStages[userId] = UserStage.Initial;
             _userCurrentCategories.Remove(userId);
             _tempWordStorage.Remove(userId);
+            _userTranslationDirections.Remove(userId);
         }   
         public static long? GetUserCurrentCategory(long userId)
         {
@@ -54,5 +59,14 @@ namespace Frontend.Managers
         {
             return _tempWordStorage.TryGetValue(userId, out var word) ? word : string.Empty;
         }
+         public static void SetTranslationDirection(long userId, TranslationDirection direction)
+        {
+            _userTranslationDirections[userId] = direction;
+        }
+        public static TranslationDirection? GetTranslationDirection(long userId)
+        {
+            return _userTranslationDirections.TryGetValue(userId, out var direction) ? direction : null;
+        }
+
     }
 }

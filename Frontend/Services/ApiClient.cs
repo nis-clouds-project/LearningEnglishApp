@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Frontend.Models;
 using Microsoft.Extensions.Logging;
 
@@ -323,6 +324,44 @@ namespace Frontend.Services
             {
                 _logger.LogError(ex, "Error getting random custom word for user {UserId}", userId);
                 return null;
+            }
+        }
+
+        public async Task<string> TranslateAsync(string text, string targetLanguage)
+        {
+            try
+            {
+                var request = new TranslateRequest
+                {
+                    Text = text,
+                    TargetLanguageCode = targetLanguage
+                };
+                
+                var response = await _httpClient.PostAsJsonAsync("/api/translator/translate", request);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Translation failed with status code: {StatusCode}", response.StatusCode);
+                    throw new HttpRequestException($"Translation request failed with status code: {response.StatusCode}");
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<TranslationResponse>();
+                return result?.TranslatedText ?? string.Empty;
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP request failed during translation");
+                throw;
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Failed to deserialize translation response");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error translating text");
+                throw;
             }
         }
 

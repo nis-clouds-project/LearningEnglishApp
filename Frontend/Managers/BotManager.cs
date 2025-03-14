@@ -7,6 +7,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 using System.Text;
 using Frontend.Models;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace Frontend.Managers
 {
@@ -33,24 +34,23 @@ namespace Frontend.Managers
         /// </summary>
         public static async Task StartAsync()
         {
-            var token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN") 
-                       ?? throw new InvalidOperationException("TELEGRAM_BOT_TOKEN не задан");
-            var baseUrl = Environment.GetEnvironmentVariable("BACKEND_API_URL") 
-                       ?? throw new InvalidOperationException("BACKEND_API_URL не задан");
-            
-            
-            _bot = new TelegramBotClient(token);
-            _apiClient = new ApiClient(baseUrl);
-            _cts = new CancellationTokenSource();
-
-            var receiverOptions = new ReceiverOptions
-            {
-                AllowedUpdates = Array.Empty<UpdateType>(),
-                ThrowPendingUpdates = true
-            };
-
             try
             {
+                var token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN") 
+                           ?? throw new InvalidOperationException("TELEGRAM_BOT_TOKEN не задан");
+                var baseUrl = Environment.GetEnvironmentVariable("BACKEND_API_URL") 
+                           ?? throw new InvalidOperationException("BACKEND_API_URL не задан");
+                
+                _bot = new TelegramBotClient(token);
+                _apiClient = new ApiClient(baseUrl);
+                _cts = new CancellationTokenSource();
+
+                var receiverOptions = new ReceiverOptions
+                {
+                    AllowedUpdates = Array.Empty<UpdateType>(),
+                    ThrowPendingUpdates = true
+                };
+
                 var me = await _bot.GetMeAsync(_cts.Token);
 
                 _bot.StartReceiving(
@@ -59,15 +59,10 @@ namespace Frontend.Managers
                     receiverOptions: receiverOptions,
                     cancellationToken: _cts.Token
                 );
-
-                while (!_cts.Token.IsCancellationRequested)
-                {
-                    await Task.Delay(1000, _cts.Token);
-                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при запуске бота: {ex.Message}");
+                _logger.LogError(ex, "Error starting bot");
                 throw;
             }
         }
@@ -107,6 +102,9 @@ namespace Frontend.Managers
                     case UserStage.AddingTranslation:
                         await HandleAddWordStep2(chatId, messageText, cancellationToken);
                         return;
+                    case UserStage.EnteringWordForTranslation:
+                        await HandleTranslationInput(chatId, messageText, cancellationToken);
+                        return;
                 }
 
                 switch (messageText.ToLower())
@@ -136,6 +134,9 @@ namespace Frontend.Managers
                         break;
                     case "/addword":
                         await StartAddWord(chatId, cancellationToken);
+                        break;
+                    case "/translate":
+                        await HandleTranslateCommand(chatId, cancellationToken);
                         break;
                     default:
                         await _bot!.SendTextMessageAsync(
@@ -236,6 +237,32 @@ namespace Frontend.Managers
                         UserStageManager.SetUserStage(chatId.Value, UserStage.GeneratingText);
                         await HandleGenerateCommand(chatId.Value, cancellationToken);
                         break;
+                    case "translate_en_ru":
+                        UserStageManager.SetTranslationDirection(chatId.Value, TranslationDirection.EnglishToRussian);
+                        UserStageManager.SetUserStage(chatId.Value, UserStage.EnteringWordForTranslation);
+                        await _bot!.SendTextMessageAsync(
+                            chatId: chatId.Value,
+                            text: "Введите слово на английском языке:",
+                            cancellationToken: cancellationToken);
+                        break;
+                    case "translate_ru_en":
+                        UserStageManager.SetTranslationDirection(chatId.Value, TranslationDirection.RussianToEnglish);
+                        UserStageManager.SetUserStage(chatId.Value, UserStage.EnteringWordForTranslation);
+                        await _bot!.SendTextMessageAsync(
+                            chatId: chatId.Value,
+                            text: "Введите слово на русском языке:",
+                            cancellationToken: cancellationToken);
+                        break;
+                    case var s when s.StartsWith("save_translation_"):
+                        var parts = s.Replace("save_translation_", "").Split('_');
+                        if (parts.Length == 2)
+                        {
+                            await HandleSaveTranslation(chatId.Value, parts[0], parts[1], cancellationToken);
+                        }
+                        break;
+                    case "translate":
+                        await HandleTranslateCommand(chatId.Value, cancellationToken);
+                        break;
                     default:
                         break;
                 }
@@ -259,6 +286,7 @@ namespace Frontend.Managers
 
         private static Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
+            _logger.LogError(exception, "Telegram error occurred");
             return Task.CompletedTask;
         }
 
@@ -418,6 +446,7 @@ namespace Frontend.Managers
                                  "Основные команды:\n" +
                                  "👋 /start - Начать работу с ботом\n" +
                                  "📚 /learn - Начать изучение слов\n" +
+                                 "🔄 /translate - Перевести слово (русский ↔️ английский)\n" +
                                  "📝 /addword - Добавить своё слово\n" +
                                  "❓ /help - Показать эту справку\n\n" +
                                  "Как учить слова:\n" +
@@ -428,10 +457,15 @@ namespace Frontend.Managers
                                  "1. Используйте команду /addword\n" +
                                  "2. Введите английское слово\n" +
                                  "3. Введите русский перевод\n\n" +
+                                 "Как использовать переводчик:\n" +
+                                 "1. Используйте команду /translate\n" +
+                                 "2. Выберите направление перевода\n" +
+                                 "3. Введите слово для перевода\n" +
+                                 "4. Опционально сохраните перевод в словарь\n\n" +
                                  "Советы:\n" +
                                  "- Регулярно повторяйте изученные слова\n" +
                                  "- Используйте слова в контексте\n" +
-                                 "- Учите понемногу, но каждый день";
+                                 "- Учите понемногу, но каждый день\n\n";
 
                 await _bot!.SendTextMessageAsync(
                     chatId: chatId,
@@ -440,6 +474,7 @@ namespace Frontend.Managers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error showing help for user {ChatId}", chatId);
                 await _bot!.SendTextMessageAsync(
                     chatId: chatId,
                     text: "Произошла ошибка при загрузке справки. Пожалуйста, попробуйте позже.",
@@ -1058,6 +1093,7 @@ namespace Frontend.Managers
                                 "📝 /addword - Добавить своё слово\n" +
                                 "📖 /vocabulary - Посмотреть изученные слова\n" +
                                 "✍️ /generate - Сгенерировать текст из изученных слов\n" +
+                                "🔄 /translate - Перевести слово\n" +
                                 "❓ /help - Подробная справка\n\n" +
                                 "Выберите действие:";
 
@@ -1072,6 +1108,10 @@ namespace Frontend.Managers
                 {
                     InlineKeyboardButton.WithCallbackData(text: "📖 Мой словарь", callbackData: "show_vocabulary"),
                     InlineKeyboardButton.WithCallbackData(text: "✍️ Генерировать текст", callbackData: "generate_text")
+                },
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "🔄 Перевести", callbackData: "translate")
                 }
             });
 
@@ -1080,6 +1120,150 @@ namespace Frontend.Managers
                 text: mainMenuMessage,
                 replyMarkup: keyboard,
                 cancellationToken: cancellationToken);
+        }
+
+        private static async Task HandleTranslateCommand(long chatId, CancellationToken cancellationToken)
+        {
+            UserStageManager.SetUserStage(chatId, UserStage.ChoosingTranslationDirection);
+            
+            var keyboard = new InlineKeyboardMarkup(new[]
+            {
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        text: "🇬🇧 Английский → 🇷🇺 Русский",
+                        callbackData: "translate_en_ru"),
+                    InlineKeyboardButton.WithCallbackData(
+                        text: "🇷🇺 Русский → 🇬🇧 Английский",
+                        callbackData: "translate_ru_en")
+                },
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        text: "🔙 В меню",
+                        callbackData: "return_menu")
+                }
+            });
+
+            await _bot!.SendTextMessageAsync(
+                chatId: chatId,
+                text: "Выберите направление перевода:",
+                replyMarkup: keyboard,
+                cancellationToken: cancellationToken);
+        }
+
+        private static async Task HandleTranslationInput(long chatId, string text, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var direction = UserStageManager.GetTranslationDirection(chatId);
+                if (!direction.HasValue)
+                {
+                    await _bot!.SendTextMessageAsync(
+                        chatId: chatId,
+                        text: "Произошла ошибка. Пожалуйста, начните перевод заново с команды /translate",
+                        cancellationToken: cancellationToken);
+                    UserStageManager.ResetUserState(chatId);
+                    return;
+                }
+
+                var targetLanguage = direction == TranslationDirection.EnglishToRussian ? "ru" : "en";
+                var translation = await _apiClient!.TranslateAsync(text, targetLanguage);
+
+                var sourceEmoji = direction == TranslationDirection.EnglishToRussian ? "🇬🇧" : "🇷🇺";
+                var targetEmoji = direction == TranslationDirection.EnglishToRussian ? "🇷🇺" : "🇬🇧";
+
+                var keyboard = new InlineKeyboardMarkup(new[]
+                {
+                    new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData(
+                            text: "🔄 Перевести ещё",
+                            callbackData: "translate_again"),
+                        InlineKeyboardButton.WithCallbackData(
+                            text: "💾 Сохранить слово",
+                            callbackData: $"save_translation_{text}_{translation}")
+                    },
+                    new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData(
+                            text: "🔙 В меню",
+                            callbackData: "return_menu")
+                    }
+                });
+
+                await _bot!.SendTextMessageAsync(
+                    chatId: chatId,
+                    text: $"Перевод:\n\n{sourceEmoji} {text}\n{targetEmoji} {translation}",
+                    replyMarkup: keyboard,
+                    cancellationToken: cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in translation for user {ChatId}", chatId);
+                await _bot!.SendTextMessageAsync(
+                    chatId: chatId,
+                    text: "Произошла ошибка при переводе. Пожалуйста, попробуйте позже.",
+                    cancellationToken: cancellationToken);
+            }
+            finally
+            {
+                UserStageManager.ResetUserState(chatId);
+            }
+        }
+
+        private static async Task HandleSaveTranslation(long chatId, string originalText, string translation, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var result = await _apiClient!.AddCustomWordAsync(
+                    chatId,
+                    originalText,
+                    translation);
+
+                if (result != null)
+                {
+                    var keyboard = new InlineKeyboardMarkup(new[]
+                    {
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData(
+                                text: "🔄 Перевести ещё",
+                                callbackData: "translate"),
+                            InlineKeyboardButton.WithCallbackData(
+                                text: "📚 Мой словарь",
+                                callbackData: "show_vocabulary")
+                        },
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData(
+                                text: "🔙 В меню",
+                                callbackData: "return_menu")
+                        }
+                    });
+
+                    await _bot!.SendTextMessageAsync(
+                        chatId: chatId,
+                        text: "✅ Слово успешно сохранено в ваш словарь!",
+                        replyMarkup: keyboard,
+                        cancellationToken: cancellationToken);
+                }
+                else
+                {
+                    await _bot!.SendTextMessageAsync(
+                        chatId: chatId,
+                        text: "❌ Не удалось сохранить слово. Пожалуйста, попробуйте позже.",
+                        cancellationToken: cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving translation for user {ChatId}", chatId);
+                await _bot!.SendTextMessageAsync(
+                    chatId: chatId,
+                    text: "❌ Произошла ошибка при сохранении слова. Пожалуйста, попробуйте позже.",
+                    cancellationToken: cancellationToken);
+            }
         }
     }
 }
