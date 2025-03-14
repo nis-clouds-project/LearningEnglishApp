@@ -188,4 +188,46 @@ public static class VocabularyManager
             UserStageManager.ResetUserState(chatId);
         }
     }
+    
+    private static async Task HandleDeleteMyWord(long chatId, long wordId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (_apiClient == null)
+            {
+                await _bot!.SendTextMessageAsync(
+                    chatId: chatId,
+                    text: "Произошла внутренняя ошибка. Пожалуйста, попробуйте позже.",
+                    cancellationToken: cancellationToken);
+                return;
+            }
+ 
+            var success = await _apiClient.DeleteCustomWord(chatId, wordId);
+ 
+            if (success)
+            {
+                await _bot!.SendTextMessageAsync(
+                    chatId: chatId,
+                    text: "✅ Слово успешно удалено.",
+                    cancellationToken: cancellationToken);
+            }
+            else
+            {
+                await _bot!.SendTextMessageAsync(
+                    chatId: chatId,
+                    text: "❌ Не удалось удалить слово. Пожалуйста, попробуйте позже.",
+                    cancellationToken: cancellationToken);
+            }
+ 
+            await HandleShowMyWords(chatId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _bot!.SendTextMessageAsync(
+                chatId: chatId,
+                text: "Произошла ошибка при удалении слова. Пожалуйста, попробуйте позже.",
+                cancellationToken: cancellationToken);
+        }
+    }
+
 }

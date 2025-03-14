@@ -3,7 +3,7 @@ version: "3.8"
 services:
   backend:
     build:
-      context: "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Backend"
+      context: "D:\\c# projects\\LearningEnglishApp\\Backend"
       dockerfile: "Dockerfile"
       target: "build"
     command: []
@@ -15,13 +15,13 @@ services:
     image: "learning_english_api:dev"
     ports: []
     volumes:
-    - "/Users/ilakonev/.nuget/packages:/root/.nuget/packages"
-    - "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Backend:/app:rw"
-    - "/Users/ilakonev/RiderProjects/LearningEnglishApp4:/src:rw"
+    - "D:\\c# projects\\LearningEnglishApp\\Backend:/app:rw"
+    - "D:\\c# projects\\LearningEnglishApp:/src:rw"
+    - "C:\\Users\\never\\.nuget\\packages:/root/.nuget/packages"
     working_dir: "/app"
   frontend:
     build:
-      context: "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend"
+      context: "D:\\c# projects\\LearningEnglishApp\\Frontend"
       dockerfile: "Dockerfile"
       target: "base"
     command: []
@@ -34,7 +34,7 @@ services:
     image: "learning_english_web:dev"
     ports: []
     volumes:
-    - "/Users/ilakonev/.nuget/packages:/root/.nuget/packages"
-    - "/Users/ilakonev/RiderProjects/LearningEnglishApp4/Frontend:/app:rw"
-    - "/Users/ilakonev/RiderProjects/LearningEnglishApp4:/src:rw"
+    - "D:\\c# projects\\LearningEnglishApp\\Frontend:/app:rw"
+    - "D:\\c# projects\\LearningEnglishApp:/src:rw"
+    - "C:\\Users\\never\\.nuget\\packages:/root/.nuget/packages"
     working_dir: "/app"

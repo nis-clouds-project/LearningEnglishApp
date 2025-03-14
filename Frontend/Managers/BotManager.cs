@@ -1,12 +1,6 @@
 using Frontend.Services;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
-using Telegram.Bot.Types;
-using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.ReplyMarkups;
-using System.Text;
-using Frontend.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Frontend.Managers
 {
@@ -19,13 +13,6 @@ namespace Frontend.Managers
         public static TelegramBotClient? Bot { get; private set; }
         public static ApiClient? ApiClient { get; private set; }
         private static CancellationTokenSource? _cts;
-        private static readonly ILogger _logger;
-
-        static BotManager()
-        {
-            _logger = LoggerFactory.Create(builder => builder.AddConsole())
-                .CreateLogger("BotManager");
-        }
 
         /// <summary>
         /// Запускает бота и начинает обработку входящих сообщений.
