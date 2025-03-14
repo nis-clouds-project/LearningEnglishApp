@@ -110,7 +110,8 @@ public static class MessageCommandManager
             },
             new[]
             {
-                InlineKeyboardButton.WithCallbackData(text: "✍️ Генерировать текст", callbackData: "generate_text")
+                InlineKeyboardButton.WithCallbackData(text: "✍️ Генерировать текст", callbackData: "generate_text"),
+                InlineKeyboardButton.WithCallbackData(text: "📚 Практика", callbackData: "practise_menu")
             }
         });
 

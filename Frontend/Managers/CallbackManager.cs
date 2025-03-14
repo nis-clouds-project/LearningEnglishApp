@@ -74,6 +74,10 @@ public static class CallbackManager
                     UserStageManager.ResetUserState(chatId.Value);
                     await MessageCommandManager.ShowMainMenu(BotManager.Bot!, chatId.Value, cancellationToken);
                     break;
+                case "practise_menu":
+                    UserStageManager.ResetUserState(chatId.Value);
+                    await PractisingManager.HandlePracticeCommand(chatId.Value, cancellationToken);
+                    break;
                 case "add_word":
                     UserStageManager.SetUserStage(chatId.Value, UserStage.AddingWord);
                     await VocabularyManager.StartAddWord(chatId.Value, cancellationToken);

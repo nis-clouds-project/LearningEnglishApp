@@ -15,33 +15,48 @@ public static class PractisingManager
             {
                 await BotManager.Bot!.SendTextMessageAsync(
                     chatId: chatId,
-                    text: "Ошибка при загрузке категорий.",
+                    text: "❌ Ошибка при загрузке категорий.",
                     cancellationToken: cancellationToken);
                 return;
             }
-        
+
             var buttons = new List<InlineKeyboardButton[]>();
-            foreach (var category in categories)
+            
+            for (var i = 0; i < categories.Count; i += 2)
             {
-                var buttonText = $"{MenuFactory.GetCategoryEmoji(category.Name)} {category.Name}";
-                var callbackData = $"practise_{category.Id}";
-                buttons.Add(new[] { InlineKeyboardButton.WithCallbackData(buttonText, callbackData) });
+                var row = new List<InlineKeyboardButton>();
+
+                var cat1 = categories[i];
+                var buttonText1 = $"{MenuFactory.GetCategoryEmoji(cat1.Name)} {cat1.Name}";
+                var callbackData1 = $"practise_{cat1.Id}";
+                row.Add(InlineKeyboardButton.WithCallbackData(buttonText1, callbackData1));
+
+                if (i + 1 < categories.Count)
+                {
+                    var cat2 = categories[i + 1];
+                    var buttonText2 = $"{MenuFactory.GetCategoryEmoji(cat2.Name)} {cat2.Name}";
+                    var callbackData2 = $"practise_{cat2.Id}";
+                    row.Add(InlineKeyboardButton.WithCallbackData(buttonText2, callbackData2));
+                }
+
+                buttons.Add(row.ToArray());
             }
+
             
             buttons.Add(new[] { InlineKeyboardButton.WithCallbackData("🔙 В меню", "return_menu") });
             var keyboard = new InlineKeyboardMarkup(buttons);
-        
+
             await BotManager.Bot!.SendTextMessageAsync(
                 chatId: chatId,
-                text: "Выберите категорию для практики:",
+                text: "📚 Выберите категорию для практики:",
                 replyMarkup: keyboard,
                 cancellationToken: cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             await BotManager.Bot!.SendTextMessageAsync(
                 chatId: chatId,
-                text: "Произошла ошибка при загрузке категорий для практики.",
+                text: "❌ Произошла ошибка при загрузке категорий для практики.",
                 cancellationToken: cancellationToken);
         }
     }
@@ -55,7 +70,7 @@ public static class PractisingManager
             {
                 await BotManager.Bot!.SendTextMessageAsync(
                     chatId: chatId,
-                    text: "Нет доступных слов для практики в выбранной категории.",
+                    text: "❌ Нет доступных слов для практики в выбранной категории.",
                     cancellationToken: cancellationToken);
                 return;
             }
@@ -78,7 +93,7 @@ public static class PractisingManager
         {
             await BotManager.Bot!.SendTextMessageAsync(
                 chatId: chatId,
-                text: "Произошла ошибка при получении слова для практики.",
+                text: "❌ Произошла ошибка при получении слова для практики.",
                 cancellationToken: cancellationToken);
         }
     }
@@ -94,14 +109,14 @@ public static class PractisingManager
             {
                 await BotManager.Bot!.SendTextMessageAsync(
                     chatId: chatId,
-                    text: "Правильно!",
+                    text: "✅ Правильно!",
                     cancellationToken: cancellationToken);
             }
             else
             {
                 await BotManager.Bot!.SendTextMessageAsync(
                     chatId: chatId,
-                    text: $"Неправильно. Правильный ответ: {expected}",
+                    text: $"❌ Неправильно. Правильный ответ: {expected}",
                     cancellationToken: cancellationToken);
             }
             
@@ -112,7 +127,7 @@ public static class PractisingManager
         {
             await BotManager.Bot!.SendTextMessageAsync(
                 chatId: chatId,
-                text: "Произошла ошибка при проверке ответа.",
+                text: "❌ Произошла ошибка при проверке ответа.",
                 cancellationToken: cancellationToken);
         }
     }
