@@ -352,5 +352,42 @@ namespace Backend.Controllers
                 return StatusCode(500, "Internal server error while getting random word");
             }
         }
+
+        [HttpGet("local-translate")]
+        public async Task<IActionResult> LocalTranslate(
+            [FromQuery] string word,
+            [FromQuery] string direction)
+        {
+            try
+            {
+                // direction: "ru-en" или "en-ru"
+                // Ищем слово
+                string? found = null;
+
+                if (direction == "ru-en")
+                {
+                    // Ищем, у кого Translation == word
+                    var entity = await _wordManager.FindByRussianAsync(word);
+                    found = entity?.Text; // берём английское
+                }
+                else if (direction == "en-ru")
+                {
+                    // Ищем, у кого Text == word
+                    var entity = await _wordManager.FindByEnglishAsync(word);
+                    found = entity?.Translation; // берём русский
+                }
+
+                if (string.IsNullOrEmpty(found))
+                {
+                    return NotFound("No such word in DB");
+                }
+
+                return Ok(new { result = found });
+            }
+            catch
+            {
+                return StatusCode(500, "Local translation error");
+            }
+        }
     }
 }
