@@ -54,6 +54,8 @@ public static class MessageCommandManager
                                   "📖 /vocabulary - Посмотреть изученные слова\n" +
                                   "📝 /mywords - Посмотреть все слова из категории \"My Words\"\n" +
                                   "📚 /practise - Практика перевода слов\n" +
+                                  "📝 /mywords - Посмотреть все слова из категории \"My Words\"\n" + 
+                                  "✍️ /translate - Перевод слова \n" +
                                   "✍️ /generate - Сгенерировать текст из изученных слов\n" +
                                   "❓ /help - Показать эту справку\n\n" +
                                   "Как учить слова:\n" +
@@ -92,8 +94,10 @@ public static class MessageCommandManager
                               "📖 /vocabulary - Посмотреть изученные слова\n" +
                               "📝 /mywords - Посмотреть все слова из категории \"My Words\"\n" +
                               "📚 /practise - Практика перевода слов\n" +
+                              "📝 /mywords - Посмотреть все слова из категории \"My Words\"\n" + 
+                              "✍️ /translate - Перевод слова \n" +
                               "✍️ /generate - Сгенерировать текст из изученных слов\n" +
-                              "❓ /help - Подробная справка\n\n" +
+                              "❓ /help - Показать эту справку\n\n" +
                               "Выберите действие:";
 
         var keyboard = new InlineKeyboardMarkup(new[]
@@ -112,6 +116,10 @@ public static class MessageCommandManager
             {
                 InlineKeyboardButton.WithCallbackData(text: "✍️ Генерировать текст", callbackData: "generate_text"),
                 InlineKeyboardButton.WithCallbackData(text: "📚 Практика", callbackData: "practise_menu")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData(text: "📖 Переводчик", callbackData: "translation_menu"),
             }
         });
 

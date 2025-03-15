@@ -83,4 +83,8 @@ public interface IWordManager
     /// <param name="userId">Идентификатор пользователя.</param>
     /// <returns>Случайное слово из категории "My Words" или null, если слов нет.</returns>
     Task<Word?> GetRandomCustomWordAsync(long userId);
+    
+    Task<Word?> FindByEnglishAsync(string english);
+    
+    Task<Word?> FindByRussianAsync(string russian);
 }

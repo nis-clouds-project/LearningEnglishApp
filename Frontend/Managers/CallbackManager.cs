@@ -1,4 +1,5 @@
-﻿using Telegram.Bot;
+﻿using System.Transactions;
+using Telegram.Bot;
 using Telegram.Bot.Types;
 
 namespace Frontend.Managers;
@@ -89,6 +90,27 @@ public static class CallbackManager
                 case "generate_text":
                     UserStageManager.SetUserStage(chatId.Value, UserStage.GeneratingText);
                     await LearningManager.HandleGenerateCommand(chatId.Value, cancellationToken);
+                    break;
+                case "local_trans_ru_en":
+                    UserStageManager.SetTempWord(chatId.Value, "ru-en");
+                    UserStageManager.SetUserStage(chatId.Value, UserStage.WaitingForLocalTranslateWord);
+                    await BotManager.Bot!.SendTextMessageAsync(
+                        chatId: chatId.Value,
+                        text: "✍️ Введите слово на русском языке:",
+                        cancellationToken: cancellationToken
+                    );
+                    break;
+                case "local_trans_en_ru":
+                    UserStageManager.SetTempWord(chatId.Value, "en-ru");
+                    UserStageManager.SetUserStage(chatId.Value, UserStage.WaitingForLocalTranslateWord);
+                    await BotManager.Bot!.SendTextMessageAsync(
+                        chatId: chatId.Value,
+                        text: "✍️ Введите слово на английском языке:",
+                        cancellationToken: cancellationToken
+                    );
+                    break;
+                case "translation_menu":
+                    await TranslationManager.ShowLocalTranslateDirectionMenu(chatId.Value, cancellationToken);
                     break;
                 case "show_my_words":
                     await VocabularyManager.HandleShowMyWords(chatId.Value, cancellationToken);
