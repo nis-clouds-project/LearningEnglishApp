@@ -313,25 +313,6 @@ namespace Frontend.Services
                 return false;
             }
         }
-        
-        public async Task<string?> GetLocalTranslationAsync(string sourceWord, string direction)
-        {
-            var url = $"api/word/local-translate?word={Uri.EscapeDataString(sourceWord)}&direction={direction}";
-
-            var response = await _httpClient.GetAsync(url);
-            if (!response.IsSuccessStatusCode)
-                return null;
-
-            var content = await response.Content.ReadAsStringAsync();
-            
-            var dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(content);
-            if (dict != null && dict.TryGetValue("result", out var translated))
-            {
-                return translated;
-            }
-
-            return null;
-        }
 
         public async Task<string?> GetLocalTranslationAsync(string sourceWord, string direction)
         {

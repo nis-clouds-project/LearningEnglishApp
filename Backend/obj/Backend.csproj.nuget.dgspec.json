@@ -1,31 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Настя\\Source\\Repos\\LearningEnglishApp\\Backend\\Backend.csproj": {}
+    "D:\\c# projects\\LearningEnglishApp\\Backend\\Backend.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Настя\\Source\\Repos\\LearningEnglishApp\\Backend\\Backend.csproj": {
+    "D:\\c# projects\\LearningEnglishApp\\Backend\\Backend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Настя\\Source\\Repos\\LearningEnglishApp\\Backend\\Backend.csproj",
+        "projectUniqueName": "D:\\c# projects\\LearningEnglishApp\\Backend\\Backend.csproj",
         "projectName": "Backend",
-        "projectPath": "C:\\Users\\Настя\\Source\\Repos\\LearningEnglishApp\\Backend\\Backend.csproj",
-        "packagesPath": "C:\\Users\\Настя\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Настя\\Source\\Repos\\LearningEnglishApp\\Backend\\obj\\",
+        "projectPath": "D:\\c# projects\\LearningEnglishApp\\Backend\\Backend.csproj",
+        "packagesPath": "C:\\Users\\never\\.nuget\\packages\\",
+        "outputPath": "D:\\c# projects\\LearningEnglishApp\\Backend\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\Настя\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "C:\\Users\\never\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -43,8 +37,7 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        },
-        "SdkAnalysisLevel": "9.0.100"
+        }
       },
       "frameworks": {
         "net8.0": {
@@ -98,7 +91,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.102/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Users\\never\\.dotnet\\sdk\\8.0.406/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
