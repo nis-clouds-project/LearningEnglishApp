@@ -31,13 +31,13 @@ namespace Frontend.Services
             try
             {
                 var response = await _httpClient.GetAsync("api/Word/categories");
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var categories = await response.Content.ReadFromJsonAsync<List<Category>>();
                     return categories;
                 }
-                
+
                 return null;
             }
             catch (Exception ex)
@@ -56,18 +56,18 @@ namespace Frontend.Services
         {
             try
             {
-                var url = categoryId.HasValue 
+                var url = categoryId.HasValue
                     ? $"api/Word/learned?userId={userId}&categoryId={categoryId}"
                     : $"api/Word/learned?userId={userId}";
-                
+
                 var response = await _httpClient.GetAsync(url);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var words = await response.Content.ReadFromJsonAsync<List<Word>>();
                     return words;
                 }
-                
+
                 return null;
             }
             catch (Exception ex)
@@ -86,13 +86,13 @@ namespace Frontend.Services
             try
             {
                 var response = await _httpClient.GetAsync($"api/TextGeneration/generate?userId={userId}");
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<GeneratedTextResponse>();
                     return result;
                 }
-                
+
                 return null;
             }
             catch (Exception ex)
@@ -111,13 +111,13 @@ namespace Frontend.Services
             try
             {
                 var response = await _httpClient.GetAsync($"api/User/exists?userId={userId}");
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var exists = await response.Content.ReadFromJsonAsync<bool>();
                     return exists;
                 }
-                
+
                 return false;
             }
             catch (Exception ex)
@@ -136,13 +136,13 @@ namespace Frontend.Services
             try
             {
                 var response = await _httpClient.PostAsJsonAsync("api/User/add", userId);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var user = await response.Content.ReadFromJsonAsync<User>();
                     return user;
                 }
-                
+
                 var error = await response.Content.ReadAsStringAsync();
                 return null;
             }
@@ -162,18 +162,18 @@ namespace Frontend.Services
         {
             try
             {
-                var url = categoryId.HasValue 
+                var url = categoryId.HasValue
                     ? $"api/Word/random?userId={userId}&categoryId={categoryId}"
                     : $"api/Word/random?userId={userId}";
-                
+
                 var response = await _httpClient.GetAsync(url);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var word = await response.Content.ReadFromJsonAsync<Word>();
                     return word;
                 }
-                
+
                 return null;
             }
             catch (Exception ex)
@@ -193,12 +193,12 @@ namespace Frontend.Services
             try
             {
                 var response = await _httpClient.PostAsync($"api/Word/vocabulary/add?userId={userId}&wordId={wordId}", null);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     return true;
                 }
-                
+
                 return false;
             }
             catch (Exception ex)
@@ -215,13 +215,13 @@ namespace Frontend.Services
             try
             {
                 var response = await _httpClient.GetAsync($"api/Word/{wordId}");
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var word = await response.Content.ReadFromJsonAsync<Word>();
                     return word;
                 }
-                
+
                 return null;
             }
             catch (Exception ex)
@@ -229,7 +229,7 @@ namespace Frontend.Services
                 return null;
             }
         }
-        
+
         public async Task<Word?> AddCustomWordAsync(long userId, string text, string translation)
         {
             try
@@ -262,13 +262,13 @@ namespace Frontend.Services
             try
             {
                 var response = await _httpClient.GetAsync($"api/Word/custom/random?userId={userId}");
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var word = await response.Content.ReadFromJsonAsync<Word>();
                     return word;
                 }
-                
+
                 return null;
             }
             catch (Exception ex)
@@ -295,7 +295,7 @@ namespace Frontend.Services
                 return null;
             }
         }
-        
+
         public async Task<bool> DeleteCustomWord(long userId, long wordId)
         {
             try
@@ -313,7 +313,7 @@ namespace Frontend.Services
                 return false;
             }
         }
-        
+
         public async Task<string?> GetLocalTranslationAsync(string sourceWord, string direction)
         {
             var url = $"api/word/local-translate?word={Uri.EscapeDataString(sourceWord)}&direction={direction}";
@@ -323,7 +323,7 @@ namespace Frontend.Services
                 return null;
 
             var content = await response.Content.ReadAsStringAsync();
-            
+
             var dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(content);
             if (dict != null && dict.TryGetValue("result", out var translated))
             {
@@ -351,4 +351,4 @@ namespace Frontend.Services
             }
         }
     }
-} 
+}
