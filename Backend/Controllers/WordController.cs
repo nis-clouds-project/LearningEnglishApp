@@ -352,7 +352,7 @@ namespace Backend.Controllers
                 return StatusCode(500, "Internal server error while getting random word");
             }
         }
-
+        
         [HttpGet("local-translate")]
         public async Task<IActionResult> LocalTranslate(
             [FromQuery] string word,

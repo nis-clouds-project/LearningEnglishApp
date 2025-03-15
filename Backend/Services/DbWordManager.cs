@@ -258,7 +258,7 @@ public class DbWordManager : IWordManager
             return new List<Word>();
         }
     }
-
+    
     public async Task<Word?> GetRandomCustomWordAsync(long userId)
     {
         try
@@ -271,7 +271,7 @@ public class DbWordManager : IWordManager
 
             var myWordsCategory = await _context.Categories
                 .FirstOrDefaultAsync(c => c.Name == "My Words");
-
+            
             if (myWordsCategory == null)
             {
                 return null;
@@ -281,7 +281,7 @@ public class DbWordManager : IWordManager
                 .Include(w => w.Category)
                 .Where(w => w.category_id == myWordsCategory.Id && w.user_id == userId)
                 .ToListAsync();
-
+            
             if (!userWords.Any())
             {
                 return null;
@@ -304,7 +304,7 @@ public class DbWordManager : IWordManager
             throw;
         }
     }
-
+    
     public async Task<Word?> FindByEnglishAsync(string english)
     {
         try
@@ -332,4 +332,4 @@ public class DbWordManager : IWordManager
             return null;
         }
     }
-}
+} 
