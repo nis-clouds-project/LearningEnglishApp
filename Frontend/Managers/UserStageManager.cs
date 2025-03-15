@@ -10,7 +10,9 @@ namespace Frontend.Managers
         ViewingVocabulary,
         AddingWord,
         AddingTranslation,
-        Practising
+        Practising,
+        ChoosingLocalTranslateDirection,
+        WaitingForLocalTranslateWord
     }   
     
     public static class UserStageManager

@@ -304,4 +304,32 @@ public class DbWordManager : IWordManager
             throw;
         }
     }
+    
+    public async Task<Word?> FindByEnglishAsync(string english)
+    {
+        try
+        {
+            var lower = english.ToLower();
+            return await _context.Words
+                .FirstOrDefaultAsync(w => w.Text.ToLower() == lower);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<Word?> FindByRussianAsync(string russian)
+    {
+        try
+        {
+            var lower = russian.ToLower();
+            return await _context.Words
+                .FirstOrDefaultAsync(w => w.Translation.ToLower() == lower);
+        }
+        catch
+        {
+            return null;
+        }
+    }
 } 

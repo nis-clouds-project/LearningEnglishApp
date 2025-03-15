@@ -34,6 +34,10 @@ public static class UpdateRoute
                     case UserStage.Practising:
                         await PractisingManager.HandlePracticeAnswer(chatId, messageText, cancellationToken);
                         return;
+                    case UserStage.WaitingForLocalTranslateWord:
+                        var direction = UserStageManager.GetTempWord(chatId);
+                        await TranslationManager.HandleLocalTranslation(chatId, messageText, direction, cancellationToken);
+                        return;
                 }
 
                 switch (messageText.ToLower())
@@ -66,6 +70,10 @@ public static class UpdateRoute
                         break;
                     case "/mywords":
                         await VocabularyManager.HandleShowMyWords(chatId, cancellationToken);
+                        break;
+                    case "/translate":
+                        UserStageManager.ResetUserState(chatId);
+                        await TranslationManager.ShowLocalTranslateDirectionMenu(chatId, cancellationToken);
                         break;
                     case "/practise":
                         UserStageManager.ResetUserState(chatId);
